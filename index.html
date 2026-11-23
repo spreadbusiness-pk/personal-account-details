@@ -8,110 +8,174 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+    label, h1, h2, h3, .card-title {
+      font-weight: 700 !important;
+    }
   </style>
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800 pb-24">
-  <header class="bg-slate-900 text-white px-4 py-4 sticky top-0 z-30 shadow">
-    <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <div>
-        <h1 class="text-lg font-bold tracking-tight">Personal Account Details</h1>
-        <p class="text-xs text-slate-300">Sajidha Home • Saima Home • Spread Business</p>
+<body class="min-h-screen pb-24">
+
+  <!-- Top App Bar -->
+  <header class="bg-slate-950 text-white px-4 py-3.5 sticky top-0 z-30 shadow-md border-b border-slate-800">
+    <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
+      <div class="min-w-0">
+        <h1 class="text-base sm:text-lg font-extrabold tracking-tight truncate">Personal Account Details</h1>
+        <p id="activeSubtitle" class="text-[11px] font-semibold text-sky-300 truncate">Overview & Separate Khatas</p>
       </div>
-      <div class="flex items-center gap-2">
-        <button onclick="syncFromSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
-          Sync Sheet
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="syncFromSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
+          Sync
         </button>
-        <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
-          PDF Report
+        <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
+          PDF
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto p-4 space-y-4">
-    <!-- Top Summary -->
-    <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div class="text-xs text-slate-500">Total Income</div>
-        <div id="totalIncome" class="text-xl font-bold text-emerald-600 mt-1">PKR 0</div>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div class="text-xs text-slate-500">Total Expense</div>
-        <div id="totalExpense" class="text-xl font-bold text-rose-600 mt-1">PKR 0</div>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div class="text-xs text-slate-500">Net Balance</div>
-        <div id="netBalance" class="text-xl font-bold text-slate-900 mt-1">PKR 0</div>
-      </div>
-    </section>
+  <!-- Khata Switcher Bar -->
+  <div class="bg-white border-b border-slate-200 sticky top-[62px] z-20">
+    <div class="max-w-3xl mx-auto px-3 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <button onclick="setView('overview')" id="nav-overview" class="nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-900 text-white">
+        Dashboard
+      </button>
+      <button onclick="setView('Sajidha Home')" id="nav-Sajidha Home" class="nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-800">
+        Sajidha Home
+      </button>
+      <button onclick="setView('Saima Home')" id="nav-Saima Home" class="nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-800">
+        Saima Home
+      </button>
+      <button onclick="setView('Spread Business')" id="nav-Spread Business" class="nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-800">
+        Spread Business
+      </button>
+      <button onclick="setView('Udhaar')" id="nav-Udhaar" class="nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-800">
+        Udhaar Khata
+      </button>
+    </div>
+  </div>
 
-    <!-- Profiles Summary -->
-    <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-200">
-        <div class="text-xs font-semibold text-slate-500">Sajidha Home</div>
-        <div id="sajidhaTotal" class="text-base font-bold text-slate-800 mt-1">PKR 0</div>
-      </div>
-      <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-200">
-        <div class="text-xs font-semibold text-slate-500">Saima Home</div>
-        <div id="saimaTotal" class="text-base font-bold text-slate-800 mt-1">PKR 0</div>
-      </div>
-      <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-200">
-        <div class="text-xs font-semibold text-slate-500">Spread Business</div>
-        <div id="spreadTotal" class="text-base font-bold text-slate-800 mt-1">PKR 0</div>
-      </div>
-    </section>
+  <main class="max-w-3xl mx-auto p-4 space-y-4">
 
-    <!-- Account Balances -->
-    <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-      <h2 class="text-sm font-bold text-slate-800 mb-3">Accounts Net Flow</h2>
-      <div id="accountsGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs"></div>
-    </section>
+    <!-- OVERVIEW LANDING PAGE -->
+    <div id="overviewSection" class="space-y-4">
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+          <div class="card-title text-xs uppercase tracking-wide text-slate-600">Total Income</div>
+          <div id="totalIncome" class="text-xl font-extrabold text-emerald-600 mt-1">PKR 0</div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+          <div class="card-title text-xs uppercase tracking-wide text-slate-600">Total Expense</div>
+          <div id="totalExpense" class="text-xl font-extrabold text-rose-600 mt-1">PKR 0</div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+          <div class="card-title text-xs uppercase tracking-wide text-slate-600">Net Balance</div>
+          <div id="netBalance" class="text-xl font-extrabold text-slate-950 mt-1">PKR 0</div>
+        </div>
+      </section>
 
-    <!-- Navigation Tabs -->
-    <nav class="flex flex-wrap gap-2">
-      <button onclick="switchTab('all')" id="tab-all" class="tab-btn bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg">All Entries</button>
-      <button onclick="switchTab('Sajidha Home')" id="tab-Sajidha Home" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Sajidha Home</button>
-      <button onclick="switchTab('Saima Home')" id="tab-Saima Home" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Saima Home</button>
-      <button onclick="switchTab('Spread Business')" id="tab-Spread Business" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Spread Business</button>
-      <button onclick="switchTab('Udhaar')" id="tab-Udhaar" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Udhaar Khata</button>
-    </nav>
+      <!-- Separate Khata Cards (Click to open separate page) -->
+      <section class="space-y-2.5">
+        <h2 class="text-sm font-extrabold text-slate-900 px-1">Select a Khata Page</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button onclick="setView('Sajidha Home')" class="text-left bg-white hover:border-indigo-400 rounded-2xl p-4 shadow-sm border-2 border-slate-200 transition">
+            <div class="flex items-center justify-between">
+              <span class="card-title text-sm font-extrabold text-indigo-700">Sajidha Home</span>
+              <span class="text-xs font-bold text-indigo-600">Open →</span>
+            </div>
+            <div id="sajidhaTotal" class="text-lg font-extrabold text-slate-900 mt-1.5">PKR 0</div>
+            <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Household Khata</div>
+          </button>
 
-    <!-- Entry Form -->
-    <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-bold text-slate-800">Add Entry / Udhaar</h2>
-        <button type="button" onclick="addCustomCategory()" class="text-xs font-semibold text-indigo-600 hover:underline">+ Add Category</button>
-      </div>
-      <form id="entryForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button onclick="setView('Saima Home')" class="text-left bg-white hover:border-purple-400 rounded-2xl p-4 shadow-sm border-2 border-slate-200 transition">
+            <div class="flex items-center justify-between">
+              <span class="card-title text-sm font-extrabold text-purple-700">Saima Home</span>
+              <span class="text-xs font-bold text-purple-600">Open →</span>
+            </div>
+            <div id="saimaTotal" class="text-lg font-extrabold text-slate-900 mt-1.5">PKR 0</div>
+            <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Household Khata</div>
+          </button>
+
+          <button onclick="setView('Spread Business')" class="text-left bg-white hover:border-emerald-400 rounded-2xl p-4 shadow-sm border-2 border-slate-200 transition">
+            <div class="flex items-center justify-between">
+              <span class="card-title text-sm font-extrabold text-emerald-700">Spread Business</span>
+              <span class="text-xs font-bold text-emerald-600">Open →</span>
+            </div>
+            <div id="spreadTotal" class="text-lg font-extrabold text-slate-900 mt-1.5">PKR 0</div>
+            <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Office & Printing Khata</div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Accounts Net Flow -->
+      <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <h2 class="text-sm font-extrabold text-slate-900 mb-3">Accounts Net Flow</h2>
+        <div id="accountsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+      </section>
+    </div>
+
+    <!-- DEDICATED KHATA VIEW (Sajidha Home / Saima Home / Spread Business / Udhaar) -->
+    <div id="khataSection" class="hidden space-y-4">
+      <div class="bg-slate-900 text-white rounded-2xl p-4 shadow flex items-center justify-between gap-3">
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Type</label>
-          <select id="type" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
-            <option value="Income">Income</option>
+          <div class="text-[11px] font-bold uppercase tracking-wider text-sky-300">Active Khata</div>
+          <h2 id="khataHeading" class="text-xl font-extrabold mt-0.5">Sajidha Home</h2>
+          <p id="khataSummarySub" class="text-xs font-semibold text-slate-300 mt-1">Total Expense: PKR 0</p>
+        </div>
+        <button onclick="toggleForm()" class="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shrink-0">
+          + New Entry
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible / Contextual Entry Form -->
+    <section id="entryFormCard" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+      <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+        <h2 id="formTitle" class="text-sm font-extrabold text-slate-900">Add Entry</h2>
+        <button type="button" onclick="addCustomCategory()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-extrabold px-3 py-1.5 rounded-lg">
+          + Add Category
+        </button>
+      </div>
+
+      <form id="entryForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-800 mb-1">Entry Type</label>
+          <select id="type" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
             <option value="Expense" selected>Expense</option>
+            <option value="Income">Income</option>
             <option value="Udhaar">Udhaar</option>
           </select>
         </div>
+
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Profile / Head</label>
-          <select id="profile" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+          <label class="block text-xs font-bold text-slate-800 mb-1">Khata / Profile</label>
+          <select id="profile" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
             <option value="Sajidha Home">Sajidha Home</option>
             <option value="Saima Home">Saima Home</option>
             <option value="Spread Business">Spread Business</option>
             <option value="Personal Income">Personal Income</option>
           </select>
         </div>
+
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Category</label>
-          <select id="category" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"></select>
+          <label class="block text-xs font-bold text-slate-800 mb-1">Category</label>
+          <select id="category" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white"></select>
         </div>
+
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Amount (PKR)</label>
-          <input id="amount" type="number" min="1" step="any" placeholder="0" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-xs font-bold text-slate-800 mb-1">Amount (PKR)</label>
+          <input id="amount" type="number" min="1" step="any" placeholder="0" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold" />
         </div>
+
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Account</label>
-          <select id="account" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+          <label class="block text-xs font-bold text-slate-800 mb-1">Payment Account</label>
+          <select id="account" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
             <option value="Cash">Cash</option>
             <option value="JazzCash">JazzCash</option>
             <option value="EasyPaisa">EasyPaisa</option>
@@ -119,39 +183,44 @@
             <option value="Bank Account">Bank Account</option>
           </select>
         </div>
+
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Paid By / Payee</label>
-          <input id="payee" type="text" placeholder="Name" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-xs font-bold text-slate-800 mb-1">Paid By / Payee</label>
+          <input id="payee" type="text" placeholder="Person or shop name" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
         </div>
+
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Date</label>
-          <input id="date" type="date" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-xs font-bold text-slate-800 mb-1">Date</label>
+          <input id="date" type="date" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold" />
         </div>
+
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Receipt Image (Optional)</label>
-          <input id="receiptFile" type="file" accept="image/*" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs" />
+          <label class="block text-xs font-bold text-slate-800 mb-1">Receipt Image (Optional)</label>
+          <input id="receiptFile" type="file" accept="image/*" class="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold bg-slate-50" />
         </div>
+
         <div class="sm:col-span-2">
-          <label class="block text-xs text-slate-600 mb-1">Note / Details</label>
-          <input id="note" type="text" placeholder="Optional details or reference" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-xs font-bold text-slate-800 mb-1">Note / Details</label>
+          <input id="note" type="text" placeholder="Optional details or reference" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
         </div>
-        <div class="sm:col-span-2 flex items-center justify-between pt-1">
-          <span id="statusMsg" class="text-xs text-slate-500">Ready</span>
-          <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2 rounded-lg">
+
+        <div class="sm:col-span-2 flex items-center justify-between gap-2 pt-1">
+          <span id="statusMsg" class="text-xs font-bold text-slate-600">Ready</span>
+          <button type="submit" class="bg-slate-950 hover:bg-slate-800 text-white text-sm font-extrabold px-5 py-2.5 rounded-xl shadow-sm">
             Save Entry
           </button>
         </div>
       </form>
     </section>
 
-    <!-- Records List -->
-    <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
+    <!-- Records Section -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-sm font-bold text-slate-800">Records</h2>
-        <div class="flex flex-wrap items-center gap-2 text-xs">
-          <input id="fromDate" type="date" onchange="renderAll()" class="border border-slate-300 rounded px-2 py-1" />
-          <input id="toDate" type="date" onchange="renderAll()" class="border border-slate-300 rounded px-2 py-1" />
-          <select id="filterType" onchange="renderAll()" class="border border-slate-300 rounded px-2 py-1">
+        <h2 id="recordsHeading" class="text-sm font-extrabold text-slate-900">Records</h2>
+        <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
+          <input id="fromDate" type="date" onchange="renderAll()" class="border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold" />
+          <input id="toDate" type="date" onchange="renderAll()" class="border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold" />
+          <select id="filterType" onchange="renderAll()" class="border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold bg-white">
             <option value="ALL">All Types</option>
             <option value="Income">Income</option>
             <option value="Expense">Expense</option>
@@ -165,25 +234,26 @@
 
   <!-- Receipt Modal -->
   <div id="receiptModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50" onclick="closeReceipt()">
-    <div class="bg-white rounded-xl max-w-lg w-full p-4 space-y-3" onclick="event.stopPropagation()">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-4 space-y-3" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-slate-800">Receipt Preview</h3>
-        <button onclick="closeReceipt()" class="text-xs font-bold px-2.5 py-1 rounded bg-slate-200">Close</button>
+        <h3 class="text-sm font-extrabold text-slate-900">Receipt Preview</h3>
+        <button onclick="closeReceipt()" class="text-xs font-extrabold px-3 py-1.5 rounded-lg bg-slate-200 text-slate-800">Close</button>
       </div>
-      <img id="receiptPreviewImg" src="" alt="Receipt" class="w-full max-h-[70vh] object-contain rounded-lg border" />
+      <img id="receiptPreviewImg" src="" alt="Receipt" class="w-full max-h-[70vh] object-contain rounded-xl border" />
     </div>
   </div>
 
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const RECORDS_KEY = "personal_account_details_records_v2";
-    const CATS_KEY = "personal_account_details_cats_v2";
+    const RECORDS_KEY = "personal_account_details_records_v3";
+    const CATS_KEY = "personal_account_details_cats_v3";
     const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
     const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
 
     let records = JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]");
     let categories = JSON.parse(localStorage.getItem(CATS_KEY) || "null") || DEFAULT_CATS;
-    let activeTab = "all";
+    let currentView = "overview";
+    let formVisible = true;
 
     document.getElementById("date").valueAsDate = new Date();
 
@@ -198,6 +268,10 @@
     function saveState() {
       localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
       localStorage.setItem(CATS_KEY, JSON.stringify(categories));
+    }
+
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
     }
 
     function renderCategories() {
@@ -221,8 +295,51 @@
       }
     }
 
-    function escapeHtml(str) {
-      return String(str || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    function toggleForm() {
+      formVisible = !formVisible;
+      document.getElementById("entryFormCard").classList.toggle("hidden", !formVisible);
+    }
+
+    function setView(viewName) {
+      currentView = viewName;
+
+      document.querySelectorAll(".nav-pill").forEach(btn => {
+        const active = btn.id === `nav-${viewName}`;
+        btn.className = active
+          ? "nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-900 text-white shadow-sm"
+          : "nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-800";
+      });
+
+      const isOverview = viewName === "overview";
+      document.getElementById("overviewSection").classList.toggle("hidden", !isOverview);
+      document.getElementById("khataSection").classList.toggle("hidden", isOverview);
+
+      if (isOverview) {
+        document.getElementById("activeSubtitle").textContent = "Overview & Separate Khatas";
+        document.getElementById("formTitle").textContent = "Add Entry";
+        document.getElementById("recordsHeading").textContent = "All Recent Records";
+        formVisible = true;
+        document.getElementById("entryFormCard").classList.remove("hidden");
+      } else {
+        document.getElementById("activeSubtitle").textContent = `${viewName} Dedicated Khata`;
+        document.getElementById("khataHeading").textContent = viewName === "Udhaar" ? "Udhaar Khata" : `${viewName} Khata`;
+        document.getElementById("formTitle").textContent = `Add Entry in ${viewName}`;
+        document.getElementById("recordsHeading").textContent = `${viewName} Records`;
+
+        if (viewName === "Udhaar") {
+          document.getElementById("type").value = "Udhaar";
+        } else {
+          document.getElementById("profile").value = viewName;
+          if (document.getElementById("type").value === "Udhaar") {
+            document.getElementById("type").value = "Expense";
+          }
+        }
+        formVisible = true;
+        document.getElementById("entryFormCard").classList.remove("hidden");
+      }
+
+      renderAll();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function fileToDataUrl(file) {
@@ -342,25 +459,14 @@
       fileInput.value = "";
     });
 
-    function switchTab(tab) {
-      activeTab = tab;
-      document.querySelectorAll(".tab-btn").forEach(btn => {
-        const isActive = btn.id === `tab-${tab}`;
-        btn.className = isActive
-          ? "tab-btn bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg"
-          : "tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg";
-      });
-      renderAll();
-    }
-
-    function getFilteredRecords() {
+    function getViewRecords() {
       const from = document.getElementById("fromDate").value;
       const to = document.getElementById("toDate").value;
       const fType = document.getElementById("filterType").value;
 
       return records.filter(r => {
-        if (activeTab === "Udhaar" && r.type !== "Udhaar") return false;
-        if (activeTab !== "all" && activeTab !== "Udhaar" && r.profile !== activeTab) return false;
+        if (currentView === "Udhaar" && r.type !== "Udhaar") return false;
+        if (currentView !== "overview" && currentView !== "Udhaar" && r.profile !== currentView) return false;
         if (fType !== "ALL" && r.type !== fType) return false;
         if (from && r.date < from) return false;
         if (to && r.date > to) return false;
@@ -391,7 +497,7 @@
     }
 
     function renderAll() {
-      let income = 0, expense = 0, sajidha = 0, saima = 0, spread = 0;
+      let income = 0, expense = 0, sajidha = 0, saima = 0, spread = 0, udhaarTotal = 0;
       const accTotals = {};
       ACCOUNTS.forEach(a => accTotals[a] = 0);
 
@@ -406,6 +512,8 @@
           if (r.profile === "Sajidha Home") sajidha += amt;
           if (r.profile === "Saima Home") saima += amt;
           if (r.profile === "Spread Business") spread += amt;
+        } else if (r.type === "Udhaar") {
+          udhaarTotal += amt;
         }
       });
 
@@ -416,38 +524,47 @@
       document.getElementById("saimaTotal").textContent = formatPKR(saima);
       document.getElementById("spreadTotal").textContent = formatPKR(spread);
 
+      if (currentView !== "overview") {
+        let subText = "";
+        if (currentView === "Sajidha Home") subText = `Total Expense: ${formatPKR(sajidha)}`;
+        else if (currentView === "Saima Home") subText = `Total Expense: ${formatPKR(saima)}`;
+        else if (currentView === "Spread Business") subText = `Total Expense: ${formatPKR(spread)}`;
+        else if (currentView === "Udhaar") subText = `Total Udhaar Recorded: ${formatPKR(udhaarTotal)}`;
+        document.getElementById("khataSummarySub").textContent = subText;
+      }
+
       document.getElementById("accountsGrid").innerHTML = ACCOUNTS.map(acc => `
-        <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
-          <div class="text-slate-500">${escapeHtml(acc)}</div>
-          <div class="font-bold text-slate-800 mt-0.5">${formatPKR(accTotals[acc])}</div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <div class="card-title text-xs font-bold text-slate-600">${escapeHtml(acc)}</div>
+          <div class="text-sm font-extrabold text-slate-900 mt-1">${formatPKR(accTotals[acc])}</div>
         </div>
       `).join("");
 
-      const list = getFilteredRecords();
+      const list = getViewRecords();
       const container = document.getElementById("recordsList");
       if (!list.length) {
-        container.innerHTML = `<p class="py-6 text-center text-slate-400 text-xs">No matching records</p>`;
+        container.innerHTML = `<p class="py-8 text-center text-slate-400 text-xs font-bold">No matching records</p>`;
         return;
       }
 
       container.innerHTML = list.map(r => `
-        <div class="py-3 flex items-start justify-between gap-3">
-          <div class="space-y-0.5">
-            <div class="font-semibold text-slate-800">
+        <div class="py-3.5 flex items-start justify-between gap-3">
+          <div class="space-y-1 min-w-0">
+            <div class="text-sm font-extrabold text-slate-900">
               ${escapeHtml(r.category)}
-              <span class="text-xs font-normal text-slate-500">(${escapeHtml(r.profile)} • ${escapeHtml(r.account)} • ${escapeHtml(r.type)})</span>
+              <span class="text-xs font-bold text-slate-500">• ${escapeHtml(r.profile)} • ${escapeHtml(r.account)}</span>
             </div>
-            <div class="text-xs text-slate-500">
+            <div class="text-xs font-semibold text-slate-500">
               ${escapeHtml(r.date)}
               ${r.payee ? " • " + escapeHtml(r.payee) : ""}
               ${r.note ? " • " + escapeHtml(r.note) : ""}
             </div>
-            <div class="flex items-center gap-3 pt-1">
-              ${r.receiptData ? `<button onclick="openReceipt('${r.id}')" class="text-xs font-semibold text-indigo-600 hover:underline">View Receipt</button>` : ""}
-              <button onclick="deleteRecord('${r.id}')" class="text-xs text-rose-500 hover:underline">Delete</button>
+            <div class="flex items-center gap-3 pt-0.5">
+              ${r.receiptData ? `<button onclick="openReceipt('${r.id}')" class="text-xs font-extrabold text-indigo-600 hover:underline">View Receipt</button>` : ""}
+              <button onclick="deleteRecord('${r.id}')" class="text-xs font-bold text-rose-600 hover:underline">Delete</button>
             </div>
           </div>
-          <div class="text-right font-bold whitespace-nowrap ${r.type === "Income" ? "text-emerald-600" : r.type === "Udhaar" ? "text-amber-600" : "text-rose-600"}">
+          <div class="text-right text-sm font-extrabold whitespace-nowrap ${r.type === "Income" ? "text-emerald-600" : r.type === "Udhaar" ? "text-amber-600" : "text-rose-600"}">
             ${r.type === "Income" ? "+" : "-"}${formatPKR(r.amount)}
           </div>
         </div>
@@ -457,9 +574,10 @@
     function exportPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
+      const title = currentView === "overview" ? "Personal Account Details - Statement" : `${currentView} - Statement`;
       doc.setFontSize(14);
-      doc.text("Personal Account Details - Statement", 14, 16);
-      const rows = getFilteredRecords().map(r => [
+      doc.text(title, 14, 16);
+      const rows = getViewRecords().map(r => [
         r.date, r.type, r.profile, r.category, r.account, r.payee || "-", Number(r.amount).toLocaleString()
       ]);
       doc.autoTable({
@@ -467,7 +585,7 @@
         head: [["Date", "Type", "Profile", "Category", "Account", "Payee", "Amount"]],
         body: rows
       });
-      doc.save("Personal-Account-Details.pdf");
+      doc.save(`${currentView.replace(/\s+/g, "-")}-Report.pdf`);
     }
 
     renderCategories();
