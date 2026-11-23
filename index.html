@@ -151,9 +151,9 @@
         </div>
       </div>
 
-      <!-- Category Manager Drawer -->
+      <!-- Khata-Specific Category Manager Drawer -->
       <div id="categoryManagerBox" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-        <div class="text-xs font-extrabold text-slate-800">Categories List (Click ✕ to remove wrong category)</div>
+        <div id="categoryManagerLabel" class="text-xs font-extrabold text-slate-800">Categories for Selected Khata</div>
         <div id="categoryChips" class="flex flex-wrap gap-2"></div>
       </div>
 
@@ -162,7 +162,7 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-800 mb-1">Entry Type</label>
-          <select id="type" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
+          <select id="type" onchange="handleTypeOrProfileChange()" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
             <option value="Expense" selected>Expense</option>
             <option value="Income">Income</option>
             <option value="Udhaar">Udhaar</option>
@@ -171,12 +171,27 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-800 mb-1">Khata / Profile</label>
-          <select id="profile" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
+          <select id="profile" onchange="handleTypeOrProfileChange()" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
             <option value="Sajidha Home">Sajidha Home</option>
             <option value="Saima Home">Saima Home</option>
             <option value="Spread Business">Spread Business</option>
             <option value="Personal Income">Personal Income</option>
           </select>
+        </div>
+
+        <!-- Lena / Dena selector shown when Type is Udhaar -->
+        <div id="udhaarDirectionBox" class="hidden sm:col-span-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <label class="block text-xs font-extrabold text-amber-900 mb-1.5">Udhaar Type (Lena / Dena)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 bg-white border border-amber-300 rounded-xl px-3 py-2 cursor-pointer text-xs font-extrabold text-emerald-700">
+              <input type="radio" name="udhaarDirection" id="udhaarLena" value="Lena" checked />
+              Lena (لینا — Receive)
+            </label>
+            <label class="flex items-center gap-2 bg-white border border-amber-300 rounded-xl px-3 py-2 cursor-pointer text-xs font-extrabold text-rose-700">
+              <input type="radio" name="udhaarDirection" id="udhaarDena" value="Dena" />
+              Dena (دینا — Pay)
+            </label>
+          </div>
         </div>
 
         <div>
@@ -227,7 +242,7 @@
 
         <div class="sm:col-span-2">
           <label class="block text-xs font-bold text-slate-800 mb-1">Description / Tafseel</label>
-          <input id="note" type="text" placeholder="Write details of why and how this expense was used..." class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
+          <input id="note" type="text" placeholder="Write details of why and how this entry happened..." class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
         </div>
 
         <div class="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 pt-1">
@@ -318,13 +333,21 @@
 
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const RECORDS_KEY = "personal_account_details_records_v9";
-    const CATS_KEY = "personal_account_details_cats_v9";
+    const RECORDS_KEY = "personal_account_details_records_v10";
+    const CATS_BY_KHATA_KEY = "personal_account_details_cats_by_khata_v10";
     const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
-    const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
+
+    const DEFAULT_CATS_BY_KHATA = {
+      "Sajidha Home": ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Child", "Personal Use", "Fast Foods", "Transport", "General"],
+      "Saima Home": ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Child", "Personal Use", "Fast Foods", "Transport", "Karakari Matrial", "General"],
+      "Spread Business": ["Printing & Paper", "Salary", "Transport", "Internet Bill", "Client Payment", "Brothers Spot", "General"],
+      "Udhaar": ["Customer Udhaar", "Supplier Udhaar", "Personal Loan", "Advance", "General"],
+      "Personal Income": ["Salary", "Business Profit", "Freelance / Design", "Other Income"]
+    };
 
     function loadSavedRecords() {
       const keys = [
+        "personal_account_details_records_v10",
         "personal_account_details_records_v9",
         "personal_account_details_records_v8",
         "personal_account_details_records_v7",
@@ -347,33 +370,37 @@
       return [];
     }
 
-    function loadSavedCategories() {
-      const keys = [
-        "personal_account_details_cats_v9",
-        "personal_account_details_cats_v8",
-        "personal_account_details_cats_v7",
-        "personal_account_details_cats_v6",
-        "personal_account_details_cats_v5",
-        "personal_account_details_cats_v4",
-        "personal_account_details_cats_v3",
-        "personal_account_details_cats_v2"
-      ];
-      for (const k of keys) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const arr = JSON.parse(raw);
-            if (Array.isArray(arr) && arr.length > 0) return arr;
+    function loadSavedCategoriesByKhata() {
+      try {
+        const raw = localStorage.getItem(CATS_BY_KHATA_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            return {
+              "Sajidha Home": Array.isArray(parsed["Sajidha Home"]) ? parsed["Sajidha Home"] : [...DEFAULT_CATS_BY_KHATA["Sajidha Home"]],
+              "Saima Home": Array.isArray(parsed["Saima Home"]) ? parsed["Saima Home"] : [...DEFAULT_CATS_BY_KHATA["Saima Home"]],
+              "Spread Business": Array.isArray(parsed["Spread Business"]) ? parsed["Spread Business"] : [...DEFAULT_CATS_BY_KHATA["Spread Business"]],
+              "Udhaar": Array.isArray(parsed["Udhaar"]) ? parsed["Udhaar"] : [...DEFAULT_CATS_BY_KHATA["Udhaar"]],
+              "Personal Income": Array.isArray(parsed["Personal Income"]) ? parsed["Personal Income"] : [...DEFAULT_CATS_BY_KHATA["Personal Income"]]
+            };
           }
-        } catch (e) {}
-      }
-      return [...DEFAULT_CATS];
+        }
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(DEFAULT_CATS_BY_KHATA));
     }
 
     let records = loadSavedRecords();
-    let categories = loadSavedCategories();
+    let catsByKhata = loadSavedCategoriesByKhata();
     let currentView = "overview";
     let formVisible = true;
+
+    function getActiveCategoryScope() {
+      const entryType = document.getElementById("type").value;
+      if (entryType === "Udhaar" || currentView === "Udhaar") return "Udhaar";
+      if (currentView !== "overview" && catsByKhata[currentView]) return currentView;
+      const prof = document.getElementById("profile").value;
+      return catsByKhata[prof] ? prof : "Spread Business";
+    }
 
     function setNowDateTime() {
       const now = new Date();
@@ -423,50 +450,46 @@
 
     function saveState() {
       localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
-      localStorage.setItem(CATS_KEY, JSON.stringify(categories));
+      localStorage.setItem(CATS_BY_KHATA_KEY, JSON.stringify(catsByKhata));
     }
 
     function escapeHtml(str) {
       return String(str || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
     }
 
-    function removeDuplicates() {
-      const seenIds = new Set();
-      const seenFingerprints = new Map();
-      const cleaned = [];
+    function getUdhaarDirection() {
+      const denaRadio = document.getElementById("udhaarDena");
+      return denaRadio && denaRadio.checked ? "Dena" : "Lena";
+    }
 
-      records.forEach(r => {
-        const fp = `${cleanDateValue(r.date)}|${r.type}|${r.profile}|${r.category}|${Number(r.amount || 0)}|${(r.note || "").trim().toLowerCase()}`;
-        if (seenIds.has(r.id)) return;
-        if (seenFingerprints.has(fp)) {
-          const prevIdx = seenFingerprints.get(fp);
-          if ((r.time || "") && !(cleaned[prevIdx].time || "")) {
-            cleaned[prevIdx] = { ...r, id: cleaned[prevIdx].id };
-          }
-          return;
-        }
-        seenIds.add(r.id);
-        seenFingerprints.set(fp, cleaned.length);
-        cleaned.push(r);
-      });
+    function setUdhaarDirection(dir) {
+      if (dir === "Dena") {
+        document.getElementById("udhaarDena").checked = true;
+      } else {
+        document.getElementById("udhaarLena").checked = true;
+      }
+    }
 
-      const diff = records.length - cleaned.length;
-      records = cleaned;
-      saveState();
-      renderAll();
-      setStatus(diff > 0 ? `Removed ${diff} duplicate entries` : "No duplicate entries found");
+    function handleTypeOrProfileChange() {
+      const entryType = document.getElementById("type").value;
+      document.getElementById("udhaarDirectionBox").classList.toggle("hidden", entryType !== "Udhaar");
+      renderCategories();
     }
 
     function renderCategories() {
+      const scope = getActiveCategoryScope();
+      const list = catsByKhata[scope] || [...DEFAULT_CATS_BY_KHATA["General"] || ["General"]];
       const sel = document.getElementById("category");
       const current = sel.value;
-      sel.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-      if (current && categories.includes(current)) {
+
+      sel.innerHTML = list.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      if (current && list.includes(current)) {
         sel.value = current;
       }
 
+      document.getElementById("categoryManagerLabel").textContent = `Categories for ${scope} (Click ✕ to remove)`;
       const chips = document.getElementById("categoryChips");
-      chips.innerHTML = categories.map(cat => `
+      chips.innerHTML = list.map(cat => `
         <span class="inline-flex items-center gap-1.5 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800">
           ${escapeHtml(cat)}
           <button type="button" onclick="deleteCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')" class="text-rose-600 font-extrabold hover:text-rose-800" title="Delete Category">✕</button>
@@ -479,26 +502,30 @@
     }
 
     function addCustomCategory() {
-      const name = prompt("Enter new category name:");
+      const scope = getActiveCategoryScope();
+      const name = prompt(`Enter new category name for ${scope}:`);
       if (!name) return;
       const clean = name.trim();
       if (!clean) return;
-      if (!categories.includes(clean)) {
-        categories.push(clean);
+      if (!catsByKhata[scope]) catsByKhata[scope] = [];
+      if (!catsByKhata[scope].includes(clean)) {
+        catsByKhata[scope].push(clean);
         saveState();
         renderCategories();
         document.getElementById("category").value = clean;
-        pushCategoryToSheet(clean);
+        pushCategoryToSheet(`${scope}: ${clean}`);
       }
     }
 
     function deleteCategory(catName) {
-      if (categories.length <= 1) {
-        alert("At least one category must remain.");
+      const scope = getActiveCategoryScope();
+      const list = catsByKhata[scope] || [];
+      if (list.length <= 1) {
+        alert(`At least one category must remain in ${scope}.`);
         return;
       }
-      if (!confirm(`Remove category "${catName}"?`)) return;
-      categories = categories.filter(c => c !== catName);
+      if (!confirm(`Remove category "${catName}" from ${scope}?`)) return;
+      catsByKhata[scope] = list.filter(c => c !== catName);
       saveState();
       renderCategories();
     }
@@ -539,10 +566,12 @@
       document.getElementById("location").value = "";
       document.getElementById("note").value = "";
       document.getElementById("receiptFile").value = "";
+      setUdhaarDirection("Lena");
       document.getElementById("submitBtn").textContent = "Save Entry";
       document.getElementById("cancelEditBtn").classList.add("hidden");
       document.getElementById("formTitle").textContent = currentView === "overview" ? "Add Entry" : `Add Entry in ${currentView}`;
       setNowDateTime();
+      handleTypeOrProfileChange();
     }
 
     function startEditRecord(id) {
@@ -554,13 +583,16 @@
       document.getElementById("editId").value = rec.id;
       document.getElementById("type").value = rec.type || "Expense";
       document.getElementById("profile").value = rec.profile || "Sajidha Home";
+      setUdhaarDirection(rec.udhaarDirection === "Dena" ? "Dena" : "Lena");
+      handleTypeOrProfileChange();
 
-      if (rec.category && !categories.includes(rec.category)) {
-        categories.push(rec.category);
+      const scope = getActiveCategoryScope();
+      if (rec.category && !catsByKhata[scope].includes(rec.category)) {
+        catsByKhata[scope].push(rec.category);
         saveState();
         renderCategories();
       }
-      document.getElementById("category").value = rec.category || categories[0];
+      document.getElementById("category").value = rec.category || catsByKhata[scope][0];
       document.getElementById("amount").value = rec.amount || "";
       document.getElementById("account").value = rec.account || "Cash";
       document.getElementById("date").value = cleanDateValue(rec.date);
@@ -608,6 +640,7 @@
         }
       }
 
+      handleTypeOrProfileChange();
       formVisible = true;
       document.getElementById("entryFormCard").classList.remove("hidden");
       renderAll();
@@ -624,20 +657,22 @@
       });
     }
 
-    async function pushCategoryToSheet(catName) {
+    async function pushCategoryToSheet(catLabel) {
       try {
         await fetch(SHEET_WEB_APP_URL, {
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sheet: "Categories", row: [String(Date.now()), catName] })
+          body: JSON.stringify({ sheet: "Categories", row: [String(Date.now()), catLabel] })
         });
       } catch (e) {}
     }
 
     async function pushToSheet(item, actionType = "save", oldItem = null) {
       const sheetName = item.type === "Udhaar" ? "Udhaar" : "Transactions";
+      const udhaarTag = item.type === "Udhaar" ? `[Udhaar: ${item.udhaarDirection || "Lena"}]` : "";
       const extraMeta = [
+        udhaarTag,
         item.time ? `Time: ${item.time}` : "",
         item.location ? `Loc: ${item.location}` : "",
         item.receiptData ? "Receipt Attached" : ""
@@ -646,7 +681,7 @@
       const row = [
         item.id,
         item.date,
-        item.type,
+        item.type === "Udhaar" ? `Udhaar (${item.udhaarDirection || "Lena"})` : item.type,
         item.profile,
         item.category,
         item.amount,
@@ -681,10 +716,19 @@
       }
     }
 
-    function parseNoteAndMeta(rawNote, existing) {
+    function parseNoteAndMeta(rawNote, existing, rawType = "") {
       let noteStr = String(rawNote || "").trim();
       let timeVal = existing.time || "";
       let locVal = existing.location || "";
+      let dirVal = existing.udhaarDirection || "";
+
+      if (/dena/i.test(rawType) || /\[Udhaar:\s*Dena\]/i.test(noteStr)) {
+        dirVal = "Dena";
+      } else if (/lena/i.test(rawType) || /\[Udhaar:\s*Lena\]/i.test(noteStr)) {
+        dirVal = "Lena";
+      } else if (/udhaar/i.test(rawType)) {
+        dirVal = "Lena";
+      }
 
       const timeMatch = noteStr.match(/Time:\s*([^|—]+)/i);
       if (timeMatch && !timeVal) {
@@ -696,6 +740,7 @@
       }
 
       const cleanNote = noteStr
+        .replace(/\s*[—|]?\s*\[Udhaar:\s*(Lena|Dena)\]/gi, "")
         .replace(/\s*[—|]?\s*Time:\s*[^|—]+/gi, "")
         .replace(/\s*[—|]?\s*Loc:\s*[^|—]+/gi, "")
         .replace(/\s*[—|]?\s*Receipt Attached/gi, "")
@@ -706,7 +751,7 @@
         locVal = inferAreaFromText(cleanNote);
       }
 
-      return { note: cleanNote, time: timeVal, location: locVal };
+      return { note: cleanNote, time: timeVal, location: locVal, udhaarDirection: dirVal };
     }
 
     async function syncFromSheet() {
@@ -723,12 +768,15 @@
             .map(r => {
               const id = String(r[0] || Date.now() + Math.random());
               const existing = localMap[id] || {};
-              const meta = parseNoteAndMeta(r[8] || "", existing);
+              const rawType = String(r[2] || "Expense");
+              const meta = parseNoteAndMeta(r[8] || "", existing, rawType);
+              const normalizedType = /udhaar/i.test(rawType) ? "Udhaar" : rawType;
               return {
                 id,
                 date: cleanDateValue(r[1] || ""),
                 time: meta.time,
-                type: String(r[2] || "Expense"),
+                type: normalizedType,
+                udhaarDirection: meta.udhaarDirection || "",
                 profile: String(r[3] || "Spread Business"),
                 category: String(r[4] || "General"),
                 amount: Number(r[5] || 0),
@@ -756,6 +804,7 @@
       e.preventDefault();
       const editId = document.getElementById("editId").value;
       const existingRec = editId ? records.find(r => r.id === editId) : null;
+      const entryType = document.getElementById("type").value;
 
       const fileInput = document.getElementById("receiptFile");
       let receiptData = existingRec ? (existingRec.receiptData || "") : "";
@@ -765,7 +814,8 @@
 
       const item = {
         id: editId || String(Date.now()),
-        type: document.getElementById("type").value,
+        type: entryType,
+        udhaarDirection: entryType === "Udhaar" ? getUdhaarDirection() : "",
         profile: document.getElementById("profile").value,
         category: document.getElementById("category").value,
         amount: Number(document.getElementById("amount").value),
@@ -889,7 +939,7 @@
     }
 
     function renderAll() {
-      let income = 0, expense = 0, sajidha = 0, saima = 0, spread = 0, udhaarTotal = 0;
+      let income = 0, expense = 0, sajidha = 0, saima = 0, spread = 0, udhaarLena = 0, udhaarDena = 0;
       const accTotals = {};
       ACCOUNTS.forEach(a => accTotals[a] = 0);
 
@@ -905,7 +955,8 @@
           if (r.profile === "Saima Home") saima += amt;
           if (r.profile === "Spread Business") spread += amt;
         } else if (r.type === "Udhaar") {
-          udhaarTotal += amt;
+          if (r.udhaarDirection === "Dena") udhaarDena += amt;
+          else udhaarLena += amt;
         }
       });
 
@@ -921,7 +972,7 @@
         if (currentView === "Sajidha Home") subText = `Total Expense: ${formatPKR(sajidha)}`;
         else if (currentView === "Saima Home") subText = `Total Expense: ${formatPKR(saima)}`;
         else if (currentView === "Spread Business") subText = `Total Expense: ${formatPKR(spread)}`;
-        else if (currentView === "Udhaar") subText = `Total Udhaar Recorded: ${formatPKR(udhaarTotal)}`;
+        else if (currentView === "Udhaar") subText = `Lena: ${formatPKR(udhaarLena)} • Dena: ${formatPKR(udhaarDena)}`;
         document.getElementById("khataSummarySub").textContent = subText;
       }
 
@@ -943,12 +994,21 @@
         const cleanDt = cleanDateValue(r.date);
         const locVal = getRecordLocation(r);
         const mapHref = buildMapUrl(locVal);
+        const isUdhaar = r.type === "Udhaar";
+        const dirLabel = isUdhaar ? (r.udhaarDirection === "Dena" ? "Dena (دینا)" : "Lena (لینا)") : r.type;
+        const amtColor = r.type === "Income"
+          ? "text-emerald-600"
+          : isUdhaar
+            ? (r.udhaarDirection === "Dena" ? "text-rose-600" : "text-emerald-700")
+            : "text-rose-600";
+        const amtSign = r.type === "Income" ? "+" : isUdhaar ? (r.udhaarDirection === "Dena" ? "-" : "+") : "-";
+
         return `
           <div class="py-3.5 flex items-start justify-between gap-3">
             <div class="space-y-1 min-w-0">
               <div class="text-sm font-extrabold text-slate-900">
                 ${escapeHtml(r.category)}
-                <span class="text-xs font-bold text-slate-500">• ${escapeHtml(r.profile)} • ${escapeHtml(r.account)}</span>
+                <span class="text-xs font-bold text-slate-500">• ${escapeHtml(r.profile)} • ${escapeHtml(r.account)} • ${escapeHtml(dirLabel)}</span>
               </div>
               <div class="text-xs font-semibold text-slate-500">
                 ${escapeHtml(cleanDt)}
@@ -967,8 +1027,8 @@
                 <button onclick="deleteRecord('${r.id}')" class="text-xs font-bold text-rose-600 hover:underline">Delete</button>
               </div>
             </div>
-            <div class="text-right text-sm font-extrabold whitespace-nowrap ${r.type === "Income" ? "text-emerald-600" : r.type === "Udhaar" ? "text-amber-600" : "text-rose-600"}">
-              ${r.type === "Income" ? "+" : "-"}${formatPKR(r.amount)}
+            <div class="text-right text-sm font-extrabold whitespace-nowrap ${amtColor}">
+              ${amtSign}${formatPKR(r.amount)}
             </div>
           </div>
         `;
@@ -1020,11 +1080,12 @@
         const tm = r.time || "-";
         const loc = getRecordLocation(r) || "-";
         const tafseel = (r.note || "-").trim();
+        const typeText = r.type === "Udhaar" ? `Udhaar (${r.udhaarDirection || "Lena"})` : (r.type || "-");
 
         tableBody.push([
           dt,
           tm,
-          r.type || "-",
+          typeText,
           r.profile || "-",
           r.category || "-",
           r.account || "-",
@@ -1087,7 +1148,7 @@
       closePdfModal();
     }
 
-    renderCategories();
+    handleTypeOrProfileChange();
     renderAll();
   </script>
 </body>
