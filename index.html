@@ -36,7 +36,7 @@
         <button onclick="syncFromSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
           Sync
         </button>
-        <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
+        <button onclick="openPdfModal()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
           PDF
         </button>
       </div>
@@ -263,6 +263,48 @@
     </section>
   </main>
 
+  <!-- PDF Date Range Modal -->
+  <div id="pdfRangeModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50" onclick="closePdfModal()">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">PDF Report Date Range</h3>
+          <p class="text-xs font-semibold text-slate-500">Select start and end date for report</p>
+        </div>
+        <button onclick="closePdfModal()" class="text-xs font-extrabold px-3 py-1.5 rounded-lg bg-slate-200 text-slate-800">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-800 mb-1">From Date</label>
+          <input id="pdfFromDate" type="date" onchange="updatePdfRangePreview()" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-800 mb-1">To Date</label>
+          <input id="pdfToDate" type="date" onchange="updatePdfRangePreview()" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold" />
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="setPdfPreset('all')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-extrabold text-slate-800">All Dates</button>
+        <button type="button" onclick="setPdfPreset('today')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-extrabold text-slate-800">Today</button>
+        <button type="button" onclick="setPdfPreset('7days')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-extrabold text-slate-800">Last 7 Days</button>
+        <button type="button" onclick="setPdfPreset('month')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-extrabold text-slate-800">This Month</button>
+      </div>
+
+      <div id="pdfRangePreview" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold text-slate-700">
+        Matching Entries: 0 • Total: PKR 0
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button type="button" onclick="closePdfModal()" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-800 text-xs font-extrabold">Cancel</button>
+        <button type="button" onclick="exportPDF()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold shadow-sm">
+          Download PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Receipt Modal -->
   <div id="receiptModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50" onclick="closeReceipt()">
     <div class="bg-white rounded-2xl max-w-lg w-full p-4 space-y-3" onclick="event.stopPropagation()">
@@ -276,13 +318,14 @@
 
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const RECORDS_KEY = "personal_account_details_records_v8";
-    const CATS_KEY = "personal_account_details_cats_v8";
+    const RECORDS_KEY = "personal_account_details_records_v9";
+    const CATS_KEY = "personal_account_details_cats_v9";
     const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
     const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
 
     function loadSavedRecords() {
       const keys = [
+        "personal_account_details_records_v9",
         "personal_account_details_records_v8",
         "personal_account_details_records_v7",
         "personal_account_details_records_v6",
@@ -306,6 +349,7 @@
 
     function loadSavedCategories() {
       const keys = [
+        "personal_account_details_cats_v9",
         "personal_account_details_cats_v8",
         "personal_account_details_cats_v7",
         "personal_account_details_cats_v6",
@@ -745,9 +789,7 @@
       resetForm();
     });
 
-    function getViewRecords() {
-      const from = document.getElementById("fromDate").value;
-      const to = document.getElementById("toDate").value;
+    function getFilteredByRange(fromVal, toVal) {
       const fType = document.getElementById("filterType").value;
 
       return records.filter(r => {
@@ -755,10 +797,69 @@
         if (currentView === "Udhaar" && r.type !== "Udhaar") return false;
         if (currentView !== "overview" && currentView !== "Udhaar" && r.profile !== currentView) return false;
         if (fType !== "ALL" && r.type !== fType) return false;
-        if (from && rDate < from) return false;
-        if (to && rDate > to) return false;
+        if (fromVal && rDate < fromVal) return false;
+        if (toVal && rDate > toVal) return false;
         return true;
       });
+    }
+
+    function getViewRecords() {
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      return getFilteredByRange(from, to);
+    }
+
+    function openPdfModal() {
+      document.getElementById("pdfFromDate").value = document.getElementById("fromDate").value || "";
+      document.getElementById("pdfToDate").value = document.getElementById("toDate").value || "";
+      updatePdfRangePreview();
+      const modal = document.getElementById("pdfRangeModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closePdfModal() {
+      const modal = document.getElementById("pdfRangeModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function setPdfPreset(preset) {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const fromEl = document.getElementById("pdfFromDate");
+      const toEl = document.getElementById("pdfToDate");
+
+      if (preset === "all") {
+        fromEl.value = "";
+        toEl.value = "";
+      } else if (preset === "today") {
+        fromEl.value = todayStr;
+        toEl.value = todayStr;
+      } else if (preset === "7days") {
+        const past = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+        fromEl.value = past.toISOString().slice(0, 10);
+        toEl.value = todayStr;
+      } else if (preset === "month") {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        fromEl.value = monthStart.toISOString().slice(0, 10);
+        toEl.value = todayStr;
+      }
+      updatePdfRangePreview();
+    }
+
+    function updatePdfRangePreview() {
+      const fromVal = document.getElementById("pdfFromDate").value;
+      const toVal = document.getElementById("pdfToDate").value;
+      const matched = getFilteredByRange(fromVal, toVal);
+      let sum = 0;
+      matched.forEach(r => {
+        const amt = Number(r.amount || 0);
+        if (r.type === "Income") sum += amt;
+        else sum -= amt;
+      });
+      document.getElementById("pdfRangePreview").textContent =
+        `Matching Entries: ${matched.length} • Total: ${formatPKR(Math.abs(sum))}`;
     }
 
     function openReceipt(id) {
@@ -877,8 +978,18 @@
     function exportPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      const list = getViewRecords();
+      const fromVal = document.getElementById("pdfFromDate").value || document.getElementById("fromDate").value;
+      const toVal = document.getElementById("pdfToDate").value || document.getElementById("toDate").value;
+
+      document.getElementById("fromDate").value = fromVal;
+      document.getElementById("toDate").value = toVal;
+      renderAll();
+
+      const list = getFilteredByRange(fromVal, toVal);
       const title = currentView === "overview" ? "Personal Account Details - Statement" : `${currentView} - Statement`;
+      const rangeLabel = fromVal || toVal
+        ? `Date Range: ${fromVal || "Start"} to ${toVal || "End"}`
+        : "Date Range: All Dates";
 
       let totalSum = 0;
       list.forEach(r => {
@@ -890,13 +1001,14 @@
       doc.setFontSize(14);
       doc.text(title, 14, 16);
 
-      doc.setFontSize(10);
+      doc.setFontSize(9.5);
       doc.setTextColor(30, 41, 59);
-      doc.text(`Total: ${formatPKR(Math.abs(totalSum))}   |   Entries: ${list.length}`, 14, 23);
+      doc.text(`${rangeLabel}   |   Total: ${formatPKR(Math.abs(totalSum))}   |   Entries: ${list.length}`, 14, 23);
 
       if (!list.length) {
-        doc.text("No records found for this filter.", 14, 32);
+        doc.text("No records found for this date range.", 14, 32);
         doc.save(`${currentView.replace(/\s+/g, "-")}-Report.pdf`);
+        closePdfModal();
         return;
       }
 
@@ -970,7 +1082,9 @@
         }
       });
 
-      doc.save(`${currentView.replace(/\s+/g, "-")}-Report.pdf`);
+      const suffix = (fromVal || toVal) ? `_${fromVal || "start"}_to_${toVal || "end"}` : "_all";
+      doc.save(`${currentView.replace(/\s+/g, "-")}${suffix}-Report.pdf`);
+      closePdfModal();
     }
 
     renderCategories();
