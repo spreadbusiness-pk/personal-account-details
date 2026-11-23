@@ -13,7 +13,7 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 pb-24">
   <header class="bg-slate-900 text-white px-4 py-4 sticky top-0 z-30 shadow">
-    <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
+    <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
       <div>
         <h1 class="text-lg font-bold tracking-tight">Personal Account Details</h1>
         <p class="text-xs text-slate-300">Sajidha Home • Saima Home • Spread Business</p>
@@ -23,13 +23,14 @@
           Sync Sheet
         </button>
         <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
-          PDF
+          PDF Report
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-3xl mx-auto p-4 space-y-4">
+  <main class="max-w-4xl mx-auto p-4 space-y-4">
+    <!-- Top Summary -->
     <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
         <div class="text-xs text-slate-500">Total Income</div>
@@ -45,6 +46,7 @@
       </div>
     </section>
 
+    <!-- Profiles Summary -->
     <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-200">
         <div class="text-xs font-semibold text-slate-500">Sajidha Home</div>
@@ -60,8 +62,27 @@
       </div>
     </section>
 
+    <!-- Account Balances -->
+    <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+      <h2 class="text-sm font-bold text-slate-800 mb-3">Accounts Net Flow</h2>
+      <div id="accountsGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs"></div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex flex-wrap gap-2">
+      <button onclick="switchTab('all')" id="tab-all" class="tab-btn bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg">All Entries</button>
+      <button onclick="switchTab('Sajidha Home')" id="tab-Sajidha Home" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Sajidha Home</button>
+      <button onclick="switchTab('Saima Home')" id="tab-Saima Home" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Saima Home</button>
+      <button onclick="switchTab('Spread Business')" id="tab-Spread Business" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Spread Business</button>
+      <button onclick="switchTab('Udhaar')" id="tab-Udhaar" class="tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg">Udhaar Khata</button>
+    </nav>
+
+    <!-- Entry Form -->
     <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
-      <h2 class="text-sm font-bold text-slate-800">Add Entry / Udhaar</h2>
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-slate-800">Add Entry / Udhaar</h2>
+        <button type="button" onclick="addCustomCategory()" class="text-xs font-semibold text-indigo-600 hover:underline">+ Add Category</button>
+      </div>
       <form id="entryForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs text-slate-600 mb-1">Type</label>
@@ -82,7 +103,7 @@
         </div>
         <div>
           <label class="block text-xs text-slate-600 mb-1">Category</label>
-          <input id="category" type="text" placeholder="e.g. Grocery, Salary, Bill" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <select id="category" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"></select>
         </div>
         <div>
           <label class="block text-xs text-slate-600 mb-1">Amount (PKR)</label>
@@ -107,8 +128,12 @@
           <input id="date" type="date" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
         </div>
         <div>
-          <label class="block text-xs text-slate-600 mb-1">Receipt / Note</label>
-          <input id="note" type="text" placeholder="Optional details or ref" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-xs text-slate-600 mb-1">Receipt Image (Optional)</label>
+          <input id="receiptFile" type="file" accept="image/*" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs text-slate-600 mb-1">Note / Details</label>
+          <input id="note" type="text" placeholder="Optional details or reference" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
         </div>
         <div class="sm:col-span-2 flex items-center justify-between pt-1">
           <span id="statusMsg" class="text-xs text-slate-500">Ready</span>
@@ -119,18 +144,18 @@
       </form>
     </section>
 
+    <!-- Records List -->
     <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-sm font-bold text-slate-800">Records</h2>
         <div class="flex flex-wrap items-center gap-2 text-xs">
-          <input id="fromDate" type="date" onchange="renderRecords()" class="border border-slate-300 rounded px-2 py-1" />
-          <input id="toDate" type="date" onchange="renderRecords()" class="border border-slate-300 rounded px-2 py-1" />
-          <select id="filterProfile" onchange="renderRecords()" class="border border-slate-300 rounded px-2 py-1">
-            <option value="ALL">All Profiles</option>
-            <option value="Sajidha Home">Sajidha Home</option>
-            <option value="Saima Home">Saima Home</option>
-            <option value="Spread Business">Spread Business</option>
-            <option value="Personal Income">Personal Income</option>
+          <input id="fromDate" type="date" onchange="renderAll()" class="border border-slate-300 rounded px-2 py-1" />
+          <input id="toDate" type="date" onchange="renderAll()" class="border border-slate-300 rounded px-2 py-1" />
+          <select id="filterType" onchange="renderAll()" class="border border-slate-300 rounded px-2 py-1">
+            <option value="ALL">All Types</option>
+            <option value="Income">Income</option>
+            <option value="Expense">Expense</option>
+            <option value="Udhaar">Udhaar</option>
           </select>
         </div>
       </div>
@@ -138,10 +163,27 @@
     </section>
   </main>
 
+  <!-- Receipt Modal -->
+  <div id="receiptModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50" onclick="closeReceipt()">
+    <div class="bg-white rounded-xl max-w-lg w-full p-4 space-y-3" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-800">Receipt Preview</h3>
+        <button onclick="closeReceipt()" class="text-xs font-bold px-2.5 py-1 rounded bg-slate-200">Close</button>
+      </div>
+      <img id="receiptPreviewImg" src="" alt="Receipt" class="w-full max-h-[70vh] object-contain rounded-lg border" />
+    </div>
+  </div>
+
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const STORAGE_KEY = "personal_account_details_records_v1";
-    let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const RECORDS_KEY = "personal_account_details_records_v2";
+    const CATS_KEY = "personal_account_details_cats_v2";
+    const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
+    const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
+
+    let records = JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]");
+    let categories = JSON.parse(localStorage.getItem(CATS_KEY) || "null") || DEFAULT_CATS;
+    let activeTab = "all";
 
     document.getElementById("date").valueAsDate = new Date();
 
@@ -153,12 +195,60 @@
       document.getElementById("statusMsg").textContent = msg;
     }
 
-    function saveLocal() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    function saveState() {
+      localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+      localStorage.setItem(CATS_KEY, JSON.stringify(categories));
+    }
+
+    function renderCategories() {
+      const sel = document.getElementById("category");
+      const current = sel.value;
+      sel.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      if (current && categories.includes(current)) sel.value = current;
+    }
+
+    function addCustomCategory() {
+      const name = prompt("Enter new category name:");
+      if (!name) return;
+      const clean = name.trim();
+      if (!clean) return;
+      if (!categories.includes(clean)) {
+        categories.push(clean);
+        saveState();
+        renderCategories();
+        document.getElementById("category").value = clean;
+        pushCategoryToSheet(clean);
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return resolve("");
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function pushCategoryToSheet(catName) {
+      try {
+        await fetch(SHEET_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sheet: "Categories", row: [String(Date.now()), catName] })
+        });
+      } catch (e) {}
     }
 
     async function pushToSheet(item) {
       const sheetName = item.type === "Udhaar" ? "Udhaar" : "Transactions";
+      const hasReceiptNote = item.receiptData ? " [Receipt Attached]" : "";
       const row = [
         item.id,
         item.date,
@@ -168,7 +258,7 @@
         item.amount,
         item.account,
         item.payee,
-        item.note
+        (item.note || "") + hasReceiptNote
       ];
       try {
         await fetch(SHEET_WEB_APP_URL, {
@@ -189,76 +279,130 @@
         const res = await fetch(`${SHEET_WEB_APP_URL}?sheet=Transactions`);
         const data = await res.json();
         if (data && Array.isArray(data.rows) && data.rows.length > 0) {
+          const localReceipts = {};
+          records.forEach(r => { if (r.receiptData) localReceipts[r.id] = r.receiptData; });
           const parsed = data.rows
             .filter(r => Array.isArray(r) && r.length >= 6 && !isNaN(Number(r[5])))
-            .map(r => ({
-              id: String(r[0] || Date.now() + Math.random()),
-              date: String(r[1] || ""),
-              type: String(r[2] || "Expense"),
-              profile: String(r[3] || "Spread Business"),
-              category: String(r[4] || "General"),
-              amount: Number(r[5] || 0),
-              account: String(r[6] || "Cash"),
-              payee: String(r[7] || ""),
-              note: String(r[8] || "")
-            }));
+            .map(r => {
+              const id = String(r[0] || Date.now() + Math.random());
+              return {
+                id,
+                date: String(r[1] || ""),
+                type: String(r[2] || "Expense"),
+                profile: String(r[3] || "Spread Business"),
+                category: String(r[4] || "General"),
+                amount: Number(r[5] || 0),
+                account: String(r[6] || "Cash"),
+                payee: String(r[7] || ""),
+                note: String(r[8] || ""),
+                receiptData: localReceipts[id] || ""
+              };
+            });
           if (parsed.length > 0) {
             records = parsed;
-            saveLocal();
-            renderRecords();
+            saveState();
+            renderAll();
           }
         }
         setStatus("Synced with Google Sheet");
       } catch (e) {
-        setStatus("Could not read sheet (check deployment access)");
+        setStatus("Saved locally / Could not pull sheet");
       }
     }
 
     document.getElementById("entryForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const fileInput = document.getElementById("receiptFile");
+      let receiptData = "";
+      if (fileInput.files && fileInput.files[0]) {
+        receiptData = await fileToDataUrl(fileInput.files[0]);
+      }
+
       const item = {
         id: String(Date.now()),
         type: document.getElementById("type").value,
         profile: document.getElementById("profile").value,
-        category: document.getElementById("category").value.trim(),
+        category: document.getElementById("category").value,
         amount: Number(document.getElementById("amount").value),
         account: document.getElementById("account").value,
         payee: document.getElementById("payee").value.trim(),
         date: document.getElementById("date").value,
-        note: document.getElementById("note").value.trim()
+        note: document.getElementById("note").value.trim(),
+        receiptData
       };
+
       records.unshift(item);
-      saveLocal();
-      renderRecords();
+      saveState();
+      renderAll();
       await pushToSheet(item);
-      document.getElementById("category").value = "";
+
       document.getElementById("amount").value = "";
       document.getElementById("payee").value = "";
       document.getElementById("note").value = "";
+      fileInput.value = "";
     });
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        const isActive = btn.id === `tab-${tab}`;
+        btn.className = isActive
+          ? "tab-btn bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg"
+          : "tab-btn bg-white text-slate-700 border border-slate-200 text-xs font-semibold px-4 py-2 rounded-lg";
+      });
+      renderAll();
+    }
 
     function getFilteredRecords() {
       const from = document.getElementById("fromDate").value;
       const to = document.getElementById("toDate").value;
-      const prof = document.getElementById("filterProfile").value;
+      const fType = document.getElementById("filterType").value;
+
       return records.filter(r => {
+        if (activeTab === "Udhaar" && r.type !== "Udhaar") return false;
+        if (activeTab !== "all" && activeTab !== "Udhaar" && r.profile !== activeTab) return false;
+        if (fType !== "ALL" && r.type !== fType) return false;
         if (from && r.date < from) return false;
         if (to && r.date > to) return false;
-        if (prof !== "ALL" && r.profile !== prof) return false;
         return true;
       });
     }
 
-    function renderRecords() {
-      const list = getFilteredRecords();
+    function openReceipt(id) {
+      const rec = records.find(r => r.id === id);
+      if (!rec || !rec.receiptData) return;
+      document.getElementById("receiptPreviewImg").src = rec.receiptData;
+      const modal = document.getElementById("receiptModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeReceipt() {
+      const modal = document.getElementById("receiptModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function deleteRecord(id) {
+      if (!confirm("Delete this entry from app?")) return;
+      records = records.filter(r => r.id !== id);
+      saveState();
+      renderAll();
+    }
+
+    function renderAll() {
       let income = 0, expense = 0, sajidha = 0, saima = 0, spread = 0;
+      const accTotals = {};
+      ACCOUNTS.forEach(a => accTotals[a] = 0);
 
       records.forEach(r => {
         const amt = Number(r.amount || 0);
         if (r.type === "Income") {
           income += amt;
+          if (accTotals[r.account] !== undefined) accTotals[r.account] += amt;
         } else if (r.type === "Expense") {
           expense += amt;
+          if (accTotals[r.account] !== undefined) accTotals[r.account] -= amt;
           if (r.profile === "Sajidha Home") sajidha += amt;
           if (r.profile === "Saima Home") saima += amt;
           if (r.profile === "Spread Business") spread += amt;
@@ -272,6 +416,14 @@
       document.getElementById("saimaTotal").textContent = formatPKR(saima);
       document.getElementById("spreadTotal").textContent = formatPKR(spread);
 
+      document.getElementById("accountsGrid").innerHTML = ACCOUNTS.map(acc => `
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+          <div class="text-slate-500">${escapeHtml(acc)}</div>
+          <div class="font-bold text-slate-800 mt-0.5">${formatPKR(accTotals[acc])}</div>
+        </div>
+      `).join("");
+
+      const list = getFilteredRecords();
       const container = document.getElementById("recordsList");
       if (!list.length) {
         container.innerHTML = `<p class="py-6 text-center text-slate-400 text-xs">No matching records</p>`;
@@ -279,12 +431,23 @@
       }
 
       container.innerHTML = list.map(r => `
-        <div class="py-3 flex items-center justify-between gap-3">
-          <div>
-            <div class="font-semibold text-slate-800">${r.category} <span class="text-xs font-normal text-slate-500">(${r.profile} • ${r.account})</span></div>
-            <div class="text-xs text-slate-500">${r.date} ${r.payee ? "• " + r.payee : ""} ${r.note ? "• " + r.note : ""}</div>
+        <div class="py-3 flex items-start justify-between gap-3">
+          <div class="space-y-0.5">
+            <div class="font-semibold text-slate-800">
+              ${escapeHtml(r.category)}
+              <span class="text-xs font-normal text-slate-500">(${escapeHtml(r.profile)} • ${escapeHtml(r.account)} • ${escapeHtml(r.type)})</span>
+            </div>
+            <div class="text-xs text-slate-500">
+              ${escapeHtml(r.date)}
+              ${r.payee ? " • " + escapeHtml(r.payee) : ""}
+              ${r.note ? " • " + escapeHtml(r.note) : ""}
+            </div>
+            <div class="flex items-center gap-3 pt-1">
+              ${r.receiptData ? `<button onclick="openReceipt('${r.id}')" class="text-xs font-semibold text-indigo-600 hover:underline">View Receipt</button>` : ""}
+              <button onclick="deleteRecord('${r.id}')" class="text-xs text-rose-500 hover:underline">Delete</button>
+            </div>
           </div>
-          <div class="text-right font-bold ${r.type === "Income" ? "text-emerald-600" : "text-rose-600"}">
+          <div class="text-right font-bold whitespace-nowrap ${r.type === "Income" ? "text-emerald-600" : r.type === "Udhaar" ? "text-amber-600" : "text-rose-600"}">
             ${r.type === "Income" ? "+" : "-"}${formatPKR(r.amount)}
           </div>
         </div>
@@ -307,7 +470,8 @@
       doc.save("Personal-Account-Details.pdf");
     }
 
-    renderRecords();
+    renderCategories();
+    renderAll();
   </script>
 </body>
 </html>
