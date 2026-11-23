@@ -29,7 +29,10 @@
         <h1 class="text-base sm:text-lg font-extrabold tracking-tight truncate">Personal Account Details</h1>
         <p id="activeSubtitle" class="text-[11px] font-semibold text-sky-300 truncate">Overview & Separate Khatas</p>
       </div>
-      <div class="flex items-center gap-2 shrink-0">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="removeDuplicates()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-2.5 py-2 rounded-xl shadow-sm">
+          Fix Dupes
+        </button>
         <button onclick="syncFromSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
           Sync
         </button>
@@ -273,13 +276,14 @@
 
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const RECORDS_KEY = "personal_account_details_records_v7";
-    const CATS_KEY = "personal_account_details_cats_v7";
+    const RECORDS_KEY = "personal_account_details_records_v8";
+    const CATS_KEY = "personal_account_details_cats_v8";
     const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
     const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
 
     function loadSavedRecords() {
       const keys = [
+        "personal_account_details_records_v8",
         "personal_account_details_records_v7",
         "personal_account_details_records_v6",
         "personal_account_details_records_v5",
@@ -302,6 +306,7 @@
 
     function loadSavedCategories() {
       const keys = [
+        "personal_account_details_cats_v8",
         "personal_account_details_cats_v7",
         "personal_account_details_cats_v6",
         "personal_account_details_cats_v5",
@@ -350,18 +355,11 @@
         "Jubilee Town", "LDA", "Thokar", "Raiwind Road", "Johar Town", "Model Town",
         "Garden Town", "Iqbal Town", "Sabzazar", "Gulberg", "DHA", "Bahria Town",
         "Faisal Town", "Wapda Town", "Multan Road", "Samanabad", "Shahdara", "Ali Town",
-        "Sher Shah Colony", "Kachi Kothi"
+        "Sher Shah Colony", "Kachi Kothi", "Bhobtain Pind"
       ];
       const lower = str.toLowerCase();
       for (const area of knownAreas) {
         if (lower.includes(area.toLowerCase())) return area;
-      }
-      const onMatch = str.match(/\bon\s+([A-Za-z0-9\s]{3,28}?)(?:\s+(?:for|to|at|by|in|per|ka|ki|ke)\b|[.,]|$)/i);
-      if (onMatch && onMatch[1]) {
-        const cand = onMatch[1].trim();
-        if (!/^(duty|cash|room|dinner|lunch|rent|bill|grocery|milk|eggs|fries|banana)$/i.test(cand)) {
-          return cand;
-        }
       }
       return "";
     }
@@ -386,6 +384,33 @@
 
     function escapeHtml(str) {
       return String(str || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    }
+
+    function removeDuplicates() {
+      const seenIds = new Set();
+      const seenFingerprints = new Map();
+      const cleaned = [];
+
+      records.forEach(r => {
+        const fp = `${cleanDateValue(r.date)}|${r.type}|${r.profile}|${r.category}|${Number(r.amount || 0)}|${(r.note || "").trim().toLowerCase()}`;
+        if (seenIds.has(r.id)) return;
+        if (seenFingerprints.has(fp)) {
+          const prevIdx = seenFingerprints.get(fp);
+          if ((r.time || "") && !(cleaned[prevIdx].time || "")) {
+            cleaned[prevIdx] = { ...r, id: cleaned[prevIdx].id };
+          }
+          return;
+        }
+        seenIds.add(r.id);
+        seenFingerprints.set(fp, cleaned.length);
+        cleaned.push(r);
+      });
+
+      const diff = records.length - cleaned.length;
+      records = cleaned;
+      saveState();
+      renderAll();
+      setStatus(diff > 0 ? `Removed ${diff} duplicate entries` : "No duplicate entries found");
     }
 
     function renderCategories() {
@@ -566,7 +591,7 @@
       } catch (e) {}
     }
 
-    async function pushToSheet(item, actionType = "save") {
+    async function pushToSheet(item, actionType = "save", oldItem = null) {
       const sheetName = item.type === "Udhaar" ? "Udhaar" : "Transactions";
       const extraMeta = [
         item.time ? `Time: ${item.time}` : "",
@@ -591,7 +616,20 @@
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sheet: sheetName, action: actionType, id: item.id, row })
+          body: JSON.stringify({
+            sheet: sheetName,
+            action: actionType,
+            id: item.id,
+            oldMatch: oldItem ? {
+              date: cleanDateValue(oldItem.date),
+              type: oldItem.type,
+              profile: oldItem.profile,
+              category: oldItem.category,
+              amount: Number(oldItem.amount || 0),
+              note: oldItem.note || ""
+            } : null,
+            row
+          })
         });
         setStatus(actionType === "update" ? "Updated & synced to Google Sheet" : "Saved & synced to Google Sheet");
       } catch (err) {
@@ -659,6 +697,7 @@
 
           if (parsed.length > 0) {
             records = parsed;
+            removeDuplicates();
             saveState();
             renderAll();
           }
@@ -702,7 +741,7 @@
 
       saveState();
       renderAll();
-      await pushToSheet(item, editId ? "update" : "save");
+      await pushToSheet(item, editId ? "update" : "save", existingRec || null);
       resetForm();
     });
 
@@ -739,9 +778,13 @@
 
     function deleteRecord(id) {
       if (!confirm("Delete this entry from app?")) return;
+      const target = records.find(r => r.id === id);
       records = records.filter(r => r.id !== id);
       saveState();
       renderAll();
+      if (target) {
+        pushToSheet(target, "delete", target);
+      }
     }
 
     function renderAll() {
