@@ -148,9 +148,9 @@
         </div>
       </div>
 
-      <!-- Category Manager Drawer (Add / Delete Categories) -->
+      <!-- Category Manager Drawer -->
       <div id="categoryManagerBox" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-        <div class="text-xs font-extrabold text-slate-800">Categories List (Click Delete to remove wrong category)</div>
+        <div class="text-xs font-extrabold text-slate-800">Categories List (Click ✕ to remove wrong category)</div>
         <div id="categoryChips" class="flex flex-wrap gap-2"></div>
       </div>
 
@@ -228,8 +228,8 @@
         </div>
 
         <div class="sm:col-span-2">
-          <label class="block text-xs font-bold text-slate-800 mb-1">Note / Details</label>
-          <input id="note" type="text" placeholder="Optional details or reference" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
+          <label class="block text-xs font-bold text-slate-800 mb-1">Description / Note (Why this expense happened)</label>
+          <input id="note" type="text" placeholder="Write reason or details of this expense..." class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
         </div>
 
         <div class="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 pt-1">
@@ -278,8 +278,8 @@
 
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const RECORDS_KEY = "personal_account_details_records_v4";
-    const CATS_KEY = "personal_account_details_cats_v4";
+    const RECORDS_KEY = "personal_account_details_records_v5";
+    const CATS_KEY = "personal_account_details_cats_v5";
     const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
     const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
 
@@ -535,6 +535,30 @@
       }
     }
 
+    function parseNoteAndMeta(rawNote, existing) {
+      let noteStr = String(rawNote || "").trim();
+      let timeVal = existing.time || "";
+      let locVal = existing.location || "";
+
+      const timeMatch = noteStr.match(/Time:\s*([^|—]+)/i);
+      if (timeMatch && !timeVal) {
+        timeVal = timeMatch[1].trim();
+      }
+      const locMatch = noteStr.match(/Loc:\s*([^|—]+)/i);
+      if (locMatch && !locVal) {
+        locVal = locMatch[1].trim();
+      }
+
+      const cleanNote = noteStr
+        .replace(/\s*[—|]?\s*Time:\s*[^|—]+/gi, "")
+        .replace(/\s*[—|]?\s*Loc:\s*[^|—]+/gi, "")
+        .replace(/\s*[—|]?\s*Receipt Attached/gi, "")
+        .replace(/\s*[—|]?\s*\[Receipt Attached\]/gi, "")
+        .trim();
+
+      return { note: cleanNote, time: timeVal, location: locVal };
+    }
+
     async function syncFromSheet() {
       setStatus("Syncing from Google Sheet...");
       try {
@@ -549,18 +573,19 @@
             .map(r => {
               const id = String(r[0] || Date.now() + Math.random());
               const existing = localMap[id] || {};
+              const meta = parseNoteAndMeta(r[8] || "", existing);
               return {
                 id,
                 date: cleanDateValue(r[1] || ""),
-                time: existing.time || "",
+                time: meta.time,
                 type: String(r[2] || "Expense"),
                 profile: String(r[3] || "Spread Business"),
                 category: String(r[4] || "General"),
                 amount: Number(r[5] || 0),
                 account: String(r[6] || "Cash"),
                 payee: String(r[7] || ""),
-                location: existing.location || "",
-                note: String(r[8] || ""),
+                location: meta.location,
+                note: meta.note,
                 receiptData: existing.receiptData || ""
               };
             });
@@ -743,24 +768,61 @@
     function exportPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
+      const list = getViewRecords();
       const title = currentView === "overview" ? "Personal Account Details - Statement" : `${currentView} - Statement`;
+
       doc.setFontSize(14);
       doc.text(title, 14, 16);
-      const rows = getViewRecords().map(r => [
-        cleanDateValue(r.date),
-        r.time || "-",
-        r.type,
-        r.profile,
-        r.category,
-        r.account,
-        r.location || "-",
-        Number(r.amount).toLocaleString()
-      ]);
+
+      const tableBody = [];
+      const subRowIndexes = new Set();
+
+      list.forEach(r => {
+        const dt = cleanDateValue(r.date) || "-";
+        const tm = r.time || "-";
+        const loc = r.location || "-";
+        const desc = r.note || r.payee || "-";
+
+        tableBody.push([
+          dt,
+          tm,
+          r.type || "-",
+          r.profile || "-",
+          r.category || "-",
+          r.account || "-",
+          loc,
+          Number(r.amount || 0).toLocaleString()
+        ]);
+
+        const subRowIndex = tableBody.length;
+        subRowIndexes.add(subRowIndex);
+        tableBody.push([
+          {
+            content: `Why / Details: ${desc}   |   Where / Location: ${loc}   |   When: ${dt} ${tm !== "-" ? "@ " + tm : ""}${r.payee ? "   |   Payee: " + r.payee : ""}`,
+            colSpan: 8,
+            styles: {
+              fontSize: 7.5,
+              textColor: [71, 85, 105],
+              fillColor: [248, 250, 252],
+              cellPadding: { top: 1.5, right: 4, bottom: 2.5, left: 6 }
+            }
+          }
+        ]);
+      });
+
       doc.autoTable({
         startY: 22,
         head: [["Date", "Time", "Type", "Profile", "Category", "Account", "Location", "Amount"]],
-        body: rows
+        body: tableBody,
+        styles: { fontSize: 8.5, cellPadding: 2.5 },
+        headStyles: { fillColor: [30, 86, 130] },
+        didParseCell: function (data) {
+          if (subRowIndexes.has(data.row.index)) {
+            data.cell.styles.fillColor = [248, 250, 252];
+          }
+        }
       });
+
       doc.save(`${currentView.replace(/\s+/g, "-")}-Report.pdf`);
     }
 
