@@ -278,13 +278,54 @@
 
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const RECORDS_KEY = "personal_account_details_records_v5";
-    const CATS_KEY = "personal_account_details_cats_v5";
+    const RECORDS_KEY = "personal_account_details_records_v6";
+    const CATS_KEY = "personal_account_details_cats_v6";
     const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
     const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
 
-    let records = JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]");
-    let categories = JSON.parse(localStorage.getItem(CATS_KEY) || "null") || [...DEFAULT_CATS];
+    function loadSavedRecords() {
+      const keys = [
+        "personal_account_details_records_v6",
+        "personal_account_details_records_v5",
+        "personal_account_details_records_v4",
+        "personal_account_details_records_v3",
+        "personal_account_details_records_v2",
+        "personal_account_details_records_v1"
+      ];
+      for (const k of keys) {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr) && arr.length > 0) return arr;
+          }
+        } catch (e) {}
+      }
+      return [];
+    }
+
+    function loadSavedCategories() {
+      const keys = [
+        "personal_account_details_cats_v6",
+        "personal_account_details_cats_v5",
+        "personal_account_details_cats_v4",
+        "personal_account_details_cats_v3",
+        "personal_account_details_cats_v2"
+      ];
+      for (const k of keys) {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr) && arr.length > 0) return arr;
+          }
+        } catch (e) {}
+      }
+      return [...DEFAULT_CATS];
+    }
+
+    let records = loadSavedRecords();
+    let categories = loadSavedCategories();
     let currentView = "overview";
     let formVisible = true;
 
@@ -297,6 +338,7 @@
     }
 
     setNowDateTime();
+    saveState();
 
     function cleanDateValue(rawDate) {
       if (!rawDate) return "";
@@ -774,6 +816,13 @@
       doc.setFontSize(14);
       doc.text(title, 14, 16);
 
+      if (!list.length) {
+        doc.setFontSize(10);
+        doc.text("No records found for this filter. Click Sync or add an entry.", 14, 28);
+        doc.save(`${currentView.replace(/\s+/g, "-")}-Report.pdf`);
+        return;
+      }
+
       const tableBody = [];
       const subRowIndexes = new Set();
 
@@ -794,11 +843,10 @@
           Number(r.amount || 0).toLocaleString()
         ]);
 
-        const subRowIndex = tableBody.length;
-        subRowIndexes.add(subRowIndex);
+        subRowIndexes.add(tableBody.length);
         tableBody.push([
           {
-            content: `Why / Details: ${desc}   |   Where / Location: ${loc}   |   When: ${dt} ${tm !== "-" ? "@ " + tm : ""}${r.payee ? "   |   Payee: " + r.payee : ""}`,
+            content: `Why / Details: ${desc}   |   Where / Location: ${loc}   |   When: ${dt}${tm !== "-" ? " @ " + tm : ""}${r.payee ? "   |   Payee: " + r.payee : ""}`,
             colSpan: 8,
             styles: {
               fontSize: 7.5,
