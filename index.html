@@ -42,7 +42,7 @@
 
   <!-- Khata Switcher Bar -->
   <div class="bg-white border-b border-slate-200 sticky top-[62px] z-20">
-    <div class="max-w-3xl mx-auto px-3 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+    <div class="max-w-3xl mx-auto px-3 py-2.5 flex items-center gap-2 overflow-x-auto">
       <button onclick="setView('overview')" id="nav-overview" class="nav-pill shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-slate-900 text-white">
         Dashboard
       </button>
@@ -80,7 +80,7 @@
         </div>
       </section>
 
-      <!-- Separate Khata Cards (Click to open separate page) -->
+      <!-- Separate Khata Cards -->
       <section class="space-y-2.5">
         <h2 class="text-sm font-extrabold text-slate-900 px-1">Select a Khata Page</h2>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -120,7 +120,7 @@
       </section>
     </div>
 
-    <!-- DEDICATED KHATA VIEW (Sajidha Home / Saima Home / Spread Business / Udhaar) -->
+    <!-- DEDICATED KHATA HEADER -->
     <div id="khataSection" class="hidden space-y-4">
       <div class="bg-slate-900 text-white rounded-2xl p-4 shadow flex items-center justify-between gap-3">
         <div>
@@ -134,16 +134,29 @@
       </div>
     </div>
 
-    <!-- Collapsible / Contextual Entry Form -->
+    <!-- ENTRY / EDIT FORM -->
     <section id="entryFormCard" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
-      <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
         <h2 id="formTitle" class="text-sm font-extrabold text-slate-900">Add Entry</h2>
-        <button type="button" onclick="addCustomCategory()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-extrabold px-3 py-1.5 rounded-lg">
-          + Add Category
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="addCustomCategory()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-extrabold px-3 py-1.5 rounded-lg">
+            + Add Category
+          </button>
+          <button type="button" onclick="toggleCategoryManager()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold px-3 py-1.5 rounded-lg">
+            Manage Categories
+          </button>
+        </div>
+      </div>
+
+      <!-- Category Manager Drawer (Add / Delete Categories) -->
+      <div id="categoryManagerBox" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+        <div class="text-xs font-extrabold text-slate-800">Categories List (Click Delete to remove wrong category)</div>
+        <div id="categoryChips" class="flex flex-wrap gap-2"></div>
       </div>
 
       <form id="entryForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <input type="hidden" id="editId" value="" />
+
         <div>
           <label class="block text-xs font-bold text-slate-800 mb-1">Entry Type</label>
           <select id="type" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white">
@@ -195,6 +208,21 @@
         </div>
 
         <div>
+          <label class="block text-xs font-bold text-slate-800 mb-1">Time</label>
+          <input id="time" type="time" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-800 mb-1">Map Location</label>
+          <div class="flex items-center gap-2">
+            <input id="location" type="text" placeholder="Place or GPS coordinates" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
+            <button type="button" onclick="captureGPSLocation()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold px-3 py-2.5 rounded-xl shrink-0">
+              GPS
+            </button>
+          </div>
+        </div>
+
+        <div>
           <label class="block text-xs font-bold text-slate-800 mb-1">Receipt Image (Optional)</label>
           <input id="receiptFile" type="file" accept="image/*" class="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold bg-slate-50" />
         </div>
@@ -204,16 +232,21 @@
           <input id="note" type="text" placeholder="Optional details or reference" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium" />
         </div>
 
-        <div class="sm:col-span-2 flex items-center justify-between gap-2 pt-1">
+        <div class="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 pt-1">
           <span id="statusMsg" class="text-xs font-bold text-slate-600">Ready</span>
-          <button type="submit" class="bg-slate-950 hover:bg-slate-800 text-white text-sm font-extrabold px-5 py-2.5 rounded-xl shadow-sm">
-            Save Entry
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" id="cancelEditBtn" onclick="resetForm()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-bold px-4 py-2.5 rounded-xl">
+              Cancel Edit
+            </button>
+            <button type="submit" id="submitBtn" class="bg-slate-950 hover:bg-slate-800 text-white text-sm font-extrabold px-5 py-2.5 rounded-xl shadow-sm">
+              Save Entry
+            </button>
+          </div>
         </div>
       </form>
     </section>
 
-    <!-- Records Section -->
+    <!-- RECORDS SECTION -->
     <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 id="recordsHeading" class="text-sm font-extrabold text-slate-900">Records</h2>
@@ -245,17 +278,32 @@
 
   <script>
     const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
-    const RECORDS_KEY = "personal_account_details_records_v3";
-    const CATS_KEY = "personal_account_details_cats_v3";
+    const RECORDS_KEY = "personal_account_details_records_v4";
+    const CATS_KEY = "personal_account_details_cats_v4";
     const ACCOUNTS = ["Cash", "JazzCash", "EasyPaisa", "SadaPay", "Bank Account"];
     const DEFAULT_CATS = ["Grocery", "Rent", "Electricity Bill", "Gas Bill", "Salary", "Printing & Paper", "Transport", "Udhaar / Loan", "General"];
 
     let records = JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]");
-    let categories = JSON.parse(localStorage.getItem(CATS_KEY) || "null") || DEFAULT_CATS;
+    let categories = JSON.parse(localStorage.getItem(CATS_KEY) || "null") || [...DEFAULT_CATS];
     let currentView = "overview";
     let formVisible = true;
 
-    document.getElementById("date").valueAsDate = new Date();
+    function setNowDateTime() {
+      const now = new Date();
+      document.getElementById("date").value = now.toISOString().slice(0, 10);
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      document.getElementById("time").value = `${hh}:${mm}`;
+    }
+
+    setNowDateTime();
+
+    function cleanDateValue(rawDate) {
+      if (!rawDate) return "";
+      const str = String(rawDate).trim();
+      const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+      return match ? match[1] : str;
+    }
 
     function formatPKR(n) {
       return "PKR " + Number(n || 0).toLocaleString();
@@ -278,7 +326,21 @@
       const sel = document.getElementById("category");
       const current = sel.value;
       sel.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-      if (current && categories.includes(current)) sel.value = current;
+      if (current && categories.includes(current)) {
+        sel.value = current;
+      }
+
+      const chips = document.getElementById("categoryChips");
+      chips.innerHTML = categories.map(cat => `
+        <span class="inline-flex items-center gap-1.5 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800">
+          ${escapeHtml(cat)}
+          <button type="button" onclick="deleteCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')" class="text-rose-600 font-extrabold hover:text-rose-800" title="Delete Category">✕</button>
+        </span>
+      `).join("");
+    }
+
+    function toggleCategoryManager() {
+      document.getElementById("categoryManagerBox").classList.toggle("hidden");
     }
 
     function addCustomCategory() {
@@ -295,9 +357,88 @@
       }
     }
 
+    function deleteCategory(catName) {
+      if (categories.length <= 1) {
+        alert("At least one category must remain.");
+        return;
+      }
+      if (!confirm(`Remove category "${catName}"?`)) return;
+      categories = categories.filter(c => c !== catName);
+      saveState();
+      renderCategories();
+    }
+
+    function captureGPSLocation() {
+      if (!navigator.geolocation) {
+        alert("GPS is not supported on this device.");
+        return;
+      }
+      setStatus("Fetching GPS location...");
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lng = pos.coords.longitude.toFixed(6);
+          document.getElementById("location").value = `${lat}, ${lng}`;
+          setStatus("GPS location added");
+        },
+        () => {
+          setStatus("Could not fetch GPS — enter location manually");
+        }
+      );
+    }
+
+    function buildMapUrl(locText) {
+      const clean = String(locText || "").trim();
+      if (!clean) return "";
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clean)}`;
+    }
+
     function toggleForm() {
       formVisible = !formVisible;
       document.getElementById("entryFormCard").classList.toggle("hidden", !formVisible);
+    }
+
+    function resetForm() {
+      document.getElementById("editId").value = "";
+      document.getElementById("amount").value = "";
+      document.getElementById("payee").value = "";
+      document.getElementById("location").value = "";
+      document.getElementById("note").value = "";
+      document.getElementById("receiptFile").value = "";
+      document.getElementById("submitBtn").textContent = "Save Entry";
+      document.getElementById("cancelEditBtn").classList.add("hidden");
+      document.getElementById("formTitle").textContent = currentView === "overview" ? "Add Entry" : `Add Entry in ${currentView}`;
+      setNowDateTime();
+    }
+
+    function startEditRecord(id) {
+      const rec = records.find(r => r.id === id);
+      if (!rec) return;
+
+      formVisible = true;
+      document.getElementById("entryFormCard").classList.remove("hidden");
+      document.getElementById("editId").value = rec.id;
+      document.getElementById("type").value = rec.type || "Expense";
+      document.getElementById("profile").value = rec.profile || "Sajidha Home";
+
+      if (rec.category && !categories.includes(rec.category)) {
+        categories.push(rec.category);
+        saveState();
+        renderCategories();
+      }
+      document.getElementById("category").value = rec.category || categories[0];
+      document.getElementById("amount").value = rec.amount || "";
+      document.getElementById("account").value = rec.account || "Cash";
+      document.getElementById("payee").value = rec.payee || "";
+      document.getElementById("date").value = cleanDateValue(rec.date);
+      document.getElementById("time").value = rec.time || "12:00";
+      document.getElementById("location").value = rec.location || "";
+      document.getElementById("note").value = rec.note || "";
+
+      document.getElementById("formTitle").textContent = "Edit Entry";
+      document.getElementById("submitBtn").textContent = "Update Entry";
+      document.getElementById("cancelEditBtn").classList.remove("hidden");
+      document.getElementById("entryFormCard").scrollIntoView({ behavior: "smooth" });
     }
 
     function setView(viewName) {
@@ -318,8 +459,6 @@
         document.getElementById("activeSubtitle").textContent = "Overview & Separate Khatas";
         document.getElementById("formTitle").textContent = "Add Entry";
         document.getElementById("recordsHeading").textContent = "All Recent Records";
-        formVisible = true;
-        document.getElementById("entryFormCard").classList.remove("hidden");
       } else {
         document.getElementById("activeSubtitle").textContent = `${viewName} Dedicated Khata`;
         document.getElementById("khataHeading").textContent = viewName === "Udhaar" ? "Udhaar Khata" : `${viewName} Khata`;
@@ -334,10 +473,10 @@
             document.getElementById("type").value = "Expense";
           }
         }
-        formVisible = true;
-        document.getElementById("entryFormCard").classList.remove("hidden");
       }
 
+      formVisible = true;
+      document.getElementById("entryFormCard").classList.remove("hidden");
       renderAll();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -363,9 +502,14 @@
       } catch (e) {}
     }
 
-    async function pushToSheet(item) {
+    async function pushToSheet(item, actionType = "save") {
       const sheetName = item.type === "Udhaar" ? "Udhaar" : "Transactions";
-      const hasReceiptNote = item.receiptData ? " [Receipt Attached]" : "";
+      const extraMeta = [
+        item.time ? `Time: ${item.time}` : "",
+        item.location ? `Loc: ${item.location}` : "",
+        item.receiptData ? "Receipt Attached" : ""
+      ].filter(Boolean).join(" | ");
+
       const row = [
         item.id,
         item.date,
@@ -375,16 +519,17 @@
         item.amount,
         item.account,
         item.payee,
-        (item.note || "") + hasReceiptNote
+        [item.note, extraMeta].filter(Boolean).join(" — ")
       ];
+
       try {
         await fetch(SHEET_WEB_APP_URL, {
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sheet: sheetName, row })
+          body: JSON.stringify({ sheet: sheetName, action: actionType, id: item.id, row })
         });
-        setStatus("Saved & synced to Google Sheet");
+        setStatus(actionType === "update" ? "Updated & synced to Google Sheet" : "Saved & synced to Google Sheet");
       } catch (err) {
         setStatus("Saved locally (Sheet sync pending)");
       }
@@ -396,25 +541,30 @@
         const res = await fetch(`${SHEET_WEB_APP_URL}?sheet=Transactions`);
         const data = await res.json();
         if (data && Array.isArray(data.rows) && data.rows.length > 0) {
-          const localReceipts = {};
-          records.forEach(r => { if (r.receiptData) localReceipts[r.id] = r.receiptData; });
+          const localMap = {};
+          records.forEach(r => { localMap[r.id] = r; });
+
           const parsed = data.rows
             .filter(r => Array.isArray(r) && r.length >= 6 && !isNaN(Number(r[5])))
             .map(r => {
               const id = String(r[0] || Date.now() + Math.random());
+              const existing = localMap[id] || {};
               return {
                 id,
-                date: String(r[1] || ""),
+                date: cleanDateValue(r[1] || ""),
+                time: existing.time || "",
                 type: String(r[2] || "Expense"),
                 profile: String(r[3] || "Spread Business"),
                 category: String(r[4] || "General"),
                 amount: Number(r[5] || 0),
                 account: String(r[6] || "Cash"),
                 payee: String(r[7] || ""),
+                location: existing.location || "",
                 note: String(r[8] || ""),
-                receiptData: localReceipts[id] || ""
+                receiptData: existing.receiptData || ""
               };
             });
+
           if (parsed.length > 0) {
             records = parsed;
             saveState();
@@ -429,34 +579,40 @@
 
     document.getElementById("entryForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const editId = document.getElementById("editId").value;
+      const existingRec = editId ? records.find(r => r.id === editId) : null;
+
       const fileInput = document.getElementById("receiptFile");
-      let receiptData = "";
+      let receiptData = existingRec ? (existingRec.receiptData || "") : "";
       if (fileInput.files && fileInput.files[0]) {
         receiptData = await fileToDataUrl(fileInput.files[0]);
       }
 
       const item = {
-        id: String(Date.now()),
+        id: editId || String(Date.now()),
         type: document.getElementById("type").value,
         profile: document.getElementById("profile").value,
         category: document.getElementById("category").value,
         amount: Number(document.getElementById("amount").value),
         account: document.getElementById("account").value,
         payee: document.getElementById("payee").value.trim(),
-        date: document.getElementById("date").value,
+        date: cleanDateValue(document.getElementById("date").value),
+        time: document.getElementById("time").value,
+        location: document.getElementById("location").value.trim(),
         note: document.getElementById("note").value.trim(),
         receiptData
       };
 
-      records.unshift(item);
+      if (editId) {
+        records = records.map(r => (r.id === editId ? item : r));
+      } else {
+        records.unshift(item);
+      }
+
       saveState();
       renderAll();
-      await pushToSheet(item);
-
-      document.getElementById("amount").value = "";
-      document.getElementById("payee").value = "";
-      document.getElementById("note").value = "";
-      fileInput.value = "";
+      await pushToSheet(item, editId ? "update" : "save");
+      resetForm();
     });
 
     function getViewRecords() {
@@ -465,11 +621,12 @@
       const fType = document.getElementById("filterType").value;
 
       return records.filter(r => {
+        const rDate = cleanDateValue(r.date);
         if (currentView === "Udhaar" && r.type !== "Udhaar") return false;
         if (currentView !== "overview" && currentView !== "Udhaar" && r.profile !== currentView) return false;
         if (fType !== "ALL" && r.type !== fType) return false;
-        if (from && r.date < from) return false;
-        if (to && r.date > to) return false;
+        if (from && rDate < from) return false;
+        if (to && rDate > to) return false;
         return true;
       });
     }
@@ -547,28 +704,40 @@
         return;
       }
 
-      container.innerHTML = list.map(r => `
-        <div class="py-3.5 flex items-start justify-between gap-3">
-          <div class="space-y-1 min-w-0">
-            <div class="text-sm font-extrabold text-slate-900">
-              ${escapeHtml(r.category)}
-              <span class="text-xs font-bold text-slate-500">• ${escapeHtml(r.profile)} • ${escapeHtml(r.account)}</span>
+      container.innerHTML = list.map(r => {
+        const cleanDt = cleanDateValue(r.date);
+        const mapHref = buildMapUrl(r.location);
+        return `
+          <div class="py-3.5 flex items-start justify-between gap-3">
+            <div class="space-y-1 min-w-0">
+              <div class="text-sm font-extrabold text-slate-900">
+                ${escapeHtml(r.category)}
+                <span class="text-xs font-bold text-slate-500">• ${escapeHtml(r.profile)} • ${escapeHtml(r.account)}</span>
+              </div>
+              <div class="text-xs font-semibold text-slate-500">
+                ${escapeHtml(cleanDt)}
+                ${r.time ? " • " + escapeHtml(r.time) : ""}
+                ${r.payee ? " • " + escapeHtml(r.payee) : ""}
+                ${r.note ? " • " + escapeHtml(r.note) : ""}
+              </div>
+              ${r.location ? `
+                <div class="text-xs font-semibold text-sky-700">
+                  📍 ${escapeHtml(r.location)}
+                  ${mapHref ? `<a href="${mapHref}" target="_blank" rel="noopener" class="underline font-bold ml-1">Open Map</a>` : ""}
+                </div>
+              ` : ""}
+              <div class="flex items-center gap-3 pt-0.5">
+                <button onclick="startEditRecord('${r.id}')" class="text-xs font-extrabold text-emerald-700 hover:underline">Edit</button>
+                ${r.receiptData ? `<button onclick="openReceipt('${r.id}')" class="text-xs font-extrabold text-indigo-600 hover:underline">View Receipt</button>` : ""}
+                <button onclick="deleteRecord('${r.id}')" class="text-xs font-bold text-rose-600 hover:underline">Delete</button>
+              </div>
             </div>
-            <div class="text-xs font-semibold text-slate-500">
-              ${escapeHtml(r.date)}
-              ${r.payee ? " • " + escapeHtml(r.payee) : ""}
-              ${r.note ? " • " + escapeHtml(r.note) : ""}
-            </div>
-            <div class="flex items-center gap-3 pt-0.5">
-              ${r.receiptData ? `<button onclick="openReceipt('${r.id}')" class="text-xs font-extrabold text-indigo-600 hover:underline">View Receipt</button>` : ""}
-              <button onclick="deleteRecord('${r.id}')" class="text-xs font-bold text-rose-600 hover:underline">Delete</button>
+            <div class="text-right text-sm font-extrabold whitespace-nowrap ${r.type === "Income" ? "text-emerald-600" : r.type === "Udhaar" ? "text-amber-600" : "text-rose-600"}">
+              ${r.type === "Income" ? "+" : "-"}${formatPKR(r.amount)}
             </div>
           </div>
-          <div class="text-right text-sm font-extrabold whitespace-nowrap ${r.type === "Income" ? "text-emerald-600" : r.type === "Udhaar" ? "text-amber-600" : "text-rose-600"}">
-            ${r.type === "Income" ? "+" : "-"}${formatPKR(r.amount)}
-          </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
 
     function exportPDF() {
@@ -578,11 +747,18 @@
       doc.setFontSize(14);
       doc.text(title, 14, 16);
       const rows = getViewRecords().map(r => [
-        r.date, r.type, r.profile, r.category, r.account, r.payee || "-", Number(r.amount).toLocaleString()
+        cleanDateValue(r.date),
+        r.time || "-",
+        r.type,
+        r.profile,
+        r.category,
+        r.account,
+        r.location || "-",
+        Number(r.amount).toLocaleString()
       ]);
       doc.autoTable({
         startY: 22,
-        head: [["Date", "Type", "Profile", "Category", "Account", "Payee", "Amount"]],
+        head: [["Date", "Time", "Type", "Profile", "Category", "Account", "Location", "Amount"]],
         body: rows
       });
       doc.save(`${currentView.replace(/\s+/g, "-")}-Report.pdf`);
