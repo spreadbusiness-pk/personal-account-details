@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Account Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 pb-24">
+  <header class="bg-slate-900 text-white px-4 py-4 sticky top-0 z-30 shadow">
+    <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
+      <div>
+        <h1 class="text-lg font-bold tracking-tight">Personal Account Details</h1>
+        <p class="text-xs text-slate-300">Sajidha Home • Saima Home • Spread Business</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="syncFromSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
+          Sync Sheet
+        </button>
+        <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
+          PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto p-4 space-y-4">
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <div class="text-xs text-slate-500">Total Income</div>
+        <div id="totalIncome" class="text-xl font-bold text-emerald-600 mt-1">PKR 0</div>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <div class="text-xs text-slate-500">Total Expense</div>
+        <div id="totalExpense" class="text-xl font-bold text-rose-600 mt-1">PKR 0</div>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <div class="text-xs text-slate-500">Net Balance</div>
+        <div id="netBalance" class="text-xl font-bold text-slate-900 mt-1">PKR 0</div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-200">
+        <div class="text-xs font-semibold text-slate-500">Sajidha Home</div>
+        <div id="sajidhaTotal" class="text-base font-bold text-slate-800 mt-1">PKR 0</div>
+      </div>
+      <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-200">
+        <div class="text-xs font-semibold text-slate-500">Saima Home</div>
+        <div id="saimaTotal" class="text-base font-bold text-slate-800 mt-1">PKR 0</div>
+      </div>
+      <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-200">
+        <div class="text-xs font-semibold text-slate-500">Spread Business</div>
+        <div id="spreadTotal" class="text-base font-bold text-slate-800 mt-1">PKR 0</div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
+      <h2 class="text-sm font-bold text-slate-800">Add Entry / Udhaar</h2>
+      <form id="entryForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Type</label>
+          <select id="type" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="Income">Income</option>
+            <option value="Expense" selected>Expense</option>
+            <option value="Udhaar">Udhaar</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Profile / Head</label>
+          <select id="profile" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="Sajidha Home">Sajidha Home</option>
+            <option value="Saima Home">Saima Home</option>
+            <option value="Spread Business">Spread Business</option>
+            <option value="Personal Income">Personal Income</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Category</label>
+          <input id="category" type="text" placeholder="e.g. Grocery, Salary, Bill" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Amount (PKR)</label>
+          <input id="amount" type="number" min="1" step="any" placeholder="0" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Account</label>
+          <select id="account" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="Cash">Cash</option>
+            <option value="JazzCash">JazzCash</option>
+            <option value="EasyPaisa">EasyPaisa</option>
+            <option value="SadaPay">SadaPay</option>
+            <option value="Bank Account">Bank Account</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Paid By / Payee</label>
+          <input id="payee" type="text" placeholder="Name" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Date</label>
+          <input id="date" type="date" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Receipt / Note</label>
+          <input id="note" type="text" placeholder="Optional details or ref" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div class="sm:col-span-2 flex items-center justify-between pt-1">
+          <span id="statusMsg" class="text-xs text-slate-500">Ready</span>
+          <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2 rounded-lg">
+            Save Entry
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-bold text-slate-800">Records</h2>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <input id="fromDate" type="date" onchange="renderRecords()" class="border border-slate-300 rounded px-2 py-1" />
+          <input id="toDate" type="date" onchange="renderRecords()" class="border border-slate-300 rounded px-2 py-1" />
+          <select id="filterProfile" onchange="renderRecords()" class="border border-slate-300 rounded px-2 py-1">
+            <option value="ALL">All Profiles</option>
+            <option value="Sajidha Home">Sajidha Home</option>
+            <option value="Saima Home">Saima Home</option>
+            <option value="Spread Business">Spread Business</option>
+            <option value="Personal Income">Personal Income</option>
+          </select>
+        </div>
+      </div>
+      <div id="recordsList" class="divide-y divide-slate-100 text-sm"></div>
+    </section>
+  </main>
+
+  <script>
+    const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyO6a7M2j7yFYJbOauJiTKov9j_fjsZ8aj0EYHNlClAFwwLcgR2c2B2wf09J49gsw8/exec";
+    const STORAGE_KEY = "personal_account_details_records_v1";
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+    document.getElementById("date").valueAsDate = new Date();
+
+    function formatPKR(n) {
+      return "PKR " + Number(n || 0).toLocaleString();
+    }
+
+    function setStatus(msg) {
+      document.getElementById("statusMsg").textContent = msg;
+    }
+
+    function saveLocal() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    async function pushToSheet(item) {
+      const sheetName = item.type === "Udhaar" ? "Udhaar" : "Transactions";
+      const row = [
+        item.id,
+        item.date,
+        item.type,
+        item.profile,
+        item.category,
+        item.amount,
+        item.account,
+        item.payee,
+        item.note
+      ];
+      try {
+        await fetch(SHEET_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sheet: sheetName, row })
+        });
+        setStatus("Saved & synced to Google Sheet");
+      } catch (err) {
+        setStatus("Saved locally (Sheet sync pending)");
+      }
+    }
+
+    async function syncFromSheet() {
+      setStatus("Syncing from Google Sheet...");
+      try {
+        const res = await fetch(`${SHEET_WEB_APP_URL}?sheet=Transactions`);
+        const data = await res.json();
+        if (data && Array.isArray(data.rows) && data.rows.length > 0) {
+          const parsed = data.rows
+            .filter(r => Array.isArray(r) && r.length >= 6 && !isNaN(Number(r[5])))
+            .map(r => ({
+              id: String(r[0] || Date.now() + Math.random()),
+              date: String(r[1] || ""),
+              type: String(r[2] || "Expense"),
+              profile: String(r[3] || "Spread Business"),
+              category: String(r[4] || "General"),
+              amount: Number(r[5] || 0),
+              account: String(r[6] || "Cash"),
+              payee: String(r[7] || ""),
+              note: String(r[8] || "")
+            }));
+          if (parsed.length > 0) {
+            records = parsed;
+            saveLocal();
+            renderRecords();
+          }
+        }
+        setStatus("Synced with Google Sheet");
+      } catch (e) {
+        setStatus("Could not read sheet (check deployment access)");
+      }
+    }
+
+    document.getElementById("entryForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const item = {
+        id: String(Date.now()),
+        type: document.getElementById("type").value,
+        profile: document.getElementById("profile").value,
+        category: document.getElementById("category").value.trim(),
+        amount: Number(document.getElementById("amount").value),
+        account: document.getElementById("account").value,
+        payee: document.getElementById("payee").value.trim(),
+        date: document.getElementById("date").value,
+        note: document.getElementById("note").value.trim()
+      };
+      records.unshift(item);
+      saveLocal();
+      renderRecords();
+      await pushToSheet(item);
+      document.getElementById("category").value = "";
+      document.getElementById("amount").value = "";
+      document.getElementById("payee").value = "";
+      document.getElementById("note").value = "";
+    });
+
+    function getFilteredRecords() {
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      const prof = document.getElementById("filterProfile").value;
+      return records.filter(r => {
+        if (from && r.date < from) return false;
+        if (to && r.date > to) return false;
+        if (prof !== "ALL" && r.profile !== prof) return false;
+        return true;
+      });
+    }
+
+    function renderRecords() {
+      const list = getFilteredRecords();
+      let income = 0, expense = 0, sajidha = 0, saima = 0, spread = 0;
+
+      records.forEach(r => {
+        const amt = Number(r.amount || 0);
+        if (r.type === "Income") {
+          income += amt;
+        } else if (r.type === "Expense") {
+          expense += amt;
+          if (r.profile === "Sajidha Home") sajidha += amt;
+          if (r.profile === "Saima Home") saima += amt;
+          if (r.profile === "Spread Business") spread += amt;
+        }
+      });
+
+      document.getElementById("totalIncome").textContent = formatPKR(income);
+      document.getElementById("totalExpense").textContent = formatPKR(expense);
+      document.getElementById("netBalance").textContent = formatPKR(income - expense);
+      document.getElementById("sajidhaTotal").textContent = formatPKR(sajidha);
+      document.getElementById("saimaTotal").textContent = formatPKR(saima);
+      document.getElementById("spreadTotal").textContent = formatPKR(spread);
+
+      const container = document.getElementById("recordsList");
+      if (!list.length) {
+        container.innerHTML = `<p class="py-6 text-center text-slate-400 text-xs">No matching records</p>`;
+        return;
+      }
+
+      container.innerHTML = list.map(r => `
+        <div class="py-3 flex items-center justify-between gap-3">
+          <div>
+            <div class="font-semibold text-slate-800">${r.category} <span class="text-xs font-normal text-slate-500">(${r.profile} • ${r.account})</span></div>
+            <div class="text-xs text-slate-500">${r.date} ${r.payee ? "• " + r.payee : ""} ${r.note ? "• " + r.note : ""}</div>
+          </div>
+          <div class="text-right font-bold ${r.type === "Income" ? "text-emerald-600" : "text-rose-600"}">
+            ${r.type === "Income" ? "+" : "-"}${formatPKR(r.amount)}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text("Personal Account Details - Statement", 14, 16);
+      const rows = getFilteredRecords().map(r => [
+        r.date, r.type, r.profile, r.category, r.account, r.payee || "-", Number(r.amount).toLocaleString()
+      ]);
+      doc.autoTable({
+        startY: 22,
+        head: [["Date", "Type", "Profile", "Category", "Account", "Payee", "Amount"]],
+        body: rows
+      });
+      doc.save("Personal-Account-Details.pdf");
+    }
+
+    renderRecords();
+  </script>
+</body>
+</html>
